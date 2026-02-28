@@ -1,4 +1,4 @@
-import type { AnimationConfig } from '@/types'
+import type { AnimationConfig, TransitionConfig } from '@/types'
 
 /**
  * Parse Claude's response to extract description text and animation config JSON
@@ -59,7 +59,7 @@ function validateConfig(raw: Record<string, unknown>): AnimationConfig {
     template: (scene.template as string) || 'TextRevealScene',
     duration: (scene.duration as number) || 6000,
     data: (scene.data as Record<string, unknown>) || {},
-    transition: scene.transition as { type: 'fade' | 'slide' | 'wipe' | 'morph' | 'none'; duration?: number } | undefined,
+    transition: scene.transition as TransitionConfig | undefined,
   }))
 
   const totalDuration = (raw.totalDuration as number) || scenes.reduce((sum, s) => sum + s.duration, 0)

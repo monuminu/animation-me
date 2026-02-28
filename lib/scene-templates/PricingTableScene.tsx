@@ -1,13 +1,8 @@
 'use client'
 
 import { motion } from 'framer-motion'
-
-interface SceneProps {
-  isActive: boolean
-  progress: number
-  onComplete: () => void
-  data: Record<string, unknown>
-}
+import { clamp, easeOutCubic, spring, resolveSceneColors, FONTS } from '@/lib/video'
+import type { SceneProps } from '@/types'
 
 interface PricingPlan {
   name: string
@@ -27,21 +22,6 @@ interface PricingTableData {
   }
 }
 
-function clamp(value: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, value))
-}
-
-function easeOutCubic(t: number) {
-  return 1 - Math.pow(1 - t, 3)
-}
-
-function springInterpolation(t: number) {
-  if (t <= 0) return 0
-  if (t >= 1) return 1
-  const decay = Math.exp(-6 * t)
-  return 1 - decay * Math.cos(12 * t * Math.PI * 0.15)
-}
-
 function PricingCard({
   plan,
   cardProgress,
@@ -58,7 +38,7 @@ function PricingCard({
   accent: string
 }) {
   const eased = plan.highlighted
-    ? springInterpolation(cardProgress)
+    ? spring(cardProgress)
     : easeOutCubic(cardProgress)
 
   const isHighlighted = plan.highlighted ?? false
@@ -277,9 +257,7 @@ export function PricingTableScene({ isActive, progress, onComplete, data }: Scen
     colors,
   } = data as unknown as PricingTableData
 
-  const bg = colors?.bg ?? '#0d1117'
-  const textColor = colors?.text ?? '#e6edf3'
-  const accent = colors?.accent ?? '#7c3aed'
+  const { bg, text: textColor, accent } = resolveSceneColors(colors)
 
   // Title: 0-0.2, cards stagger: 0.1-0.65, features: 0.4-0.85
   const titleProgress = easeOutCubic(clamp(progress / 0.2, 0, 1))
@@ -302,8 +280,7 @@ export function PricingTableScene({ isActive, progress, onComplete, data }: Scen
         justifyContent: 'center',
         padding: 'clamp(1.5rem, 3vw, 2.5rem) clamp(1rem, 3vw, 3rem)',
         overflow: 'hidden',
-        fontFamily:
-          "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+        fontFamily: FONTS.primary,
       }}
     >
       {/* Background glow for highlighted plan */}

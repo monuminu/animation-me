@@ -1,13 +1,8 @@
 'use client'
 
 import { motion } from 'framer-motion'
-
-interface SceneProps {
-  isActive: boolean
-  progress: number
-  onComplete: () => void
-  data: Record<string, unknown>
-}
+import type { SceneProps } from '@/types'
+import { clamp, easeOutCubic, spring, SPRING_PRESETS, resolveSceneColors, FONTS } from '@/lib/video'
 
 interface LogoRevealData {
   brandName: string
@@ -20,21 +15,6 @@ interface LogoRevealData {
   }
 }
 
-function clamp(value: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, value))
-}
-
-function springInterpolation(t: number) {
-  if (t <= 0) return 0
-  if (t >= 1) return 1
-  const decay = Math.exp(-8 * t)
-  return 1 - decay * Math.cos(14 * t * Math.PI * 0.12)
-}
-
-function easeOutCubic(t: number) {
-  return 1 - Math.pow(1 - t, 3)
-}
-
 export function LogoRevealScene({ isActive, progress, onComplete, data }: SceneProps) {
   const {
     brandName = 'Brand',
@@ -43,12 +23,10 @@ export function LogoRevealScene({ isActive, progress, onComplete, data }: SceneP
     colors,
   } = data as unknown as LogoRevealData
 
-  const bg = colors?.bg ?? '#0d1117'
-  const textColor = colors?.text ?? '#e6edf3'
-  const accent = colors?.accent ?? '#7c3aed'
+  const { bg, text: textColor, accent } = resolveSceneColors(colors)
 
   // Timing: logo 0-0.4, brandName types 0.25-0.7, tagline fades 0.65-0.9
-  const logoProgress = springInterpolation(clamp(progress / 0.4, 0, 1))
+  const logoProgress = spring(clamp(progress / 0.4, 0, 1), SPRING_PRESETS.snappy)
   const glowProgress = easeOutCubic(clamp(progress / 0.5, 0, 1))
 
   // Brand name character-by-character type-out
@@ -85,8 +63,7 @@ export function LogoRevealScene({ isActive, progress, onComplete, data }: SceneP
         justifyContent: 'center',
         padding: 'clamp(1.5rem, 3vw, 2rem) clamp(1.5rem, 4vw, 4rem)',
         overflow: 'hidden',
-        fontFamily:
-          "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+        fontFamily: FONTS.primary,
       }}
     >
       {/* Background radial glow */}

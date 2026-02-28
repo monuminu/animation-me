@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { AnimationConfig, ChatMessage, PlaybackState, FileTreeNode, CanvasPreset } from '@/types'
+import type { AnimationConfig, ChatMessage, PlaybackState, FileTreeNode, CanvasPreset, RecordingState } from '@/types'
 
 interface ProjectStore {
   // Project
@@ -16,6 +16,9 @@ interface ProjectStore {
 
   // Playback
   playback: PlaybackState
+
+  // Recording
+  recording: RecordingState
 
   // File tree
   fileTree: FileTreeNode[]
@@ -45,6 +48,7 @@ interface ProjectStore {
   toggleFileTree: () => void
   setFileTreeOpen: (open: boolean) => void
   setCanvasPresetId: (id: string) => void
+  setRecording: (updates: Partial<RecordingState>) => void
   openPreview: () => void
   closePreview: () => void
   reset: () => void
@@ -58,6 +62,12 @@ const initialPlayback: PlaybackState = {
   speed: 1,
 }
 
+const initialRecording: RecordingState = {
+  isRecording: false,
+  hasStarted: false,
+  hasEnded: false,
+}
+
 export const useProjectStore = create<ProjectStore>((set) => ({
   projectId: null,
   projectTitle: 'Untitled Project',
@@ -66,6 +76,7 @@ export const useProjectStore = create<ProjectStore>((set) => ({
   isGenerating: false,
   animationConfig: null,
   playback: initialPlayback,
+  recording: initialRecording,
   fileTree: [],
   selectedFile: null,
   chatPanelWidth: 320,
@@ -96,6 +107,7 @@ export const useProjectStore = create<ProjectStore>((set) => ({
       playback: config
         ? { ...initialPlayback, totalDuration: config.totalDuration }
         : initialPlayback,
+      recording: initialRecording,
     }),
 
   setPlayback: (updates) =>
@@ -118,6 +130,11 @@ export const useProjectStore = create<ProjectStore>((set) => ({
   toggleFileTree: () => set((state) => ({ isFileTreeOpen: !state.isFileTreeOpen })),
   setFileTreeOpen: (open) => set({ isFileTreeOpen: open }),
   setCanvasPresetId: (id) => set({ canvasPresetId: id }),
+
+  setRecording: (updates) =>
+    set((state) => ({
+      recording: { ...state.recording, ...updates },
+    })),
 
   openPreview: () =>
     set((state) => ({
@@ -148,6 +165,7 @@ export const useProjectStore = create<ProjectStore>((set) => ({
       isGenerating: false,
       animationConfig: null,
       playback: initialPlayback,
+      recording: initialRecording,
       fileTree: [],
       selectedFile: null,
     }),

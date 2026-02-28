@@ -1,13 +1,8 @@
 'use client'
 
 import { motion } from 'framer-motion'
-
-interface SceneProps {
-  isActive: boolean
-  progress: number
-  onComplete: () => void
-  data: Record<string, unknown>
-}
+import { clamp, easeOutCubic, easeOutQuint, resolveSceneColors, FONTS } from '@/lib/video'
+import type { SceneProps } from '@/types'
 
 interface ScreenshotShowcaseData {
   title?: string
@@ -19,18 +14,6 @@ interface ScreenshotShowcaseData {
     text: string
     accent: string
   }
-}
-
-function clamp(value: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, value))
-}
-
-function easeOutCubic(t: number) {
-  return 1 - Math.pow(1 - t, 3)
-}
-
-function easeOutQuint(t: number) {
-  return 1 - Math.pow(1 - t, 5)
 }
 
 function BrowserFrame({
@@ -232,9 +215,7 @@ export function ScreenshotShowcaseScene({ isActive, progress, onComplete, data }
     colors,
   } = data as unknown as ScreenshotShowcaseData
 
-  const bg = colors?.bg ?? '#0d1117'
-  const textColor = colors?.text ?? '#e6edf3'
-  const accent = colors?.accent ?? '#7c3aed'
+  const { bg, text: textColor, accent } = resolveSceneColors(colors)
 
   // Timing: title 0-0.25, description 0.15-0.4, frame entrance 0.2-0.7, float loop 0.7-1.0
   const titleProgress = easeOutCubic(clamp(progress / 0.25, 0, 1))
@@ -262,8 +243,7 @@ export function ScreenshotShowcaseScene({ isActive, progress, onComplete, data }
         justifyContent: 'center',
         padding: 'clamp(1.5rem, 3vw, 2.5rem) clamp(1.5rem, 3vw, 3rem)',
         overflow: 'hidden',
-        fontFamily:
-          "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+        fontFamily: FONTS.primary,
       }}
     >
       {/* Background glow under the mockup */}

@@ -1,13 +1,8 @@
 'use client'
 
 import { motion } from 'framer-motion'
-
-interface SceneProps {
-  isActive: boolean
-  progress: number
-  onComplete: () => void
-  data: Record<string, unknown>
-}
+import { clamp, easeOutCubic, easeOutQuart, resolveSceneColors, FONTS } from '@/lib/video'
+import type { SceneProps } from '@/types'
 
 interface TestimonialData {
   quote: string
@@ -22,18 +17,6 @@ interface TestimonialData {
   }
 }
 
-function clamp(value: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, value))
-}
-
-function easeOutCubic(t: number) {
-  return 1 - Math.pow(1 - t, 3)
-}
-
-function easeOutQuart(t: number) {
-  return 1 - Math.pow(1 - t, 4)
-}
-
 export function TestimonialScene({ isActive, progress, onComplete, data }: SceneProps) {
   const {
     quote = '',
@@ -44,9 +27,7 @@ export function TestimonialScene({ isActive, progress, onComplete, data }: Scene
     colors,
   } = data as unknown as TestimonialData
 
-  const bg = colors?.bg ?? '#0d1117'
-  const textColor = colors?.text ?? '#e6edf3'
-  const accent = colors?.accent ?? '#7c3aed'
+  const { bg, text: textColor, accent } = resolveSceneColors(colors)
 
   // Timing: quotation mark 0-0.2, quote text 0.1-0.55, attribution 0.45-0.75, line 0.3-0.6
   const quoteMarkProgress = easeOutCubic(clamp(progress / 0.2, 0, 1))
@@ -74,8 +55,7 @@ export function TestimonialScene({ isActive, progress, onComplete, data }: Scene
         justifyContent: 'center',
         padding: 'clamp(1.5rem, 3vw, 3rem) clamp(1.5rem, 4vw, 4rem)',
         overflow: 'hidden',
-        fontFamily:
-          "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+        fontFamily: FONTS.primary,
       }}
     >
       {/* Background glow */}
@@ -109,7 +89,7 @@ export function TestimonialScene({ isActive, progress, onComplete, data }: Scene
           transform: `scale(${0.8 + quoteMarkProgress * 0.2}) rotate(${(1 - quoteMarkProgress) * -10}deg)`,
           pointerEvents: 'none',
           userSelect: 'none',
-          fontFamily: 'Georgia, "Times New Roman", serif',
+          fontFamily: FONTS.serif,
         }}
       >
         {'\u201C'}
@@ -136,7 +116,7 @@ export function TestimonialScene({ isActive, progress, onComplete, data }: Scene
             lineHeight: 1,
             opacity: quoteMarkProgress,
             transform: `translateY(${(1 - quoteMarkProgress) * 20}px)`,
-            fontFamily: 'Georgia, "Times New Roman", serif',
+            fontFamily: FONTS.serif,
           }}
         >
           {'\u201C'}

@@ -1,13 +1,8 @@
 'use client'
 
 import { motion } from 'framer-motion'
-
-interface SceneProps {
-  isActive: boolean
-  progress: number
-  onComplete: () => void
-  data: Record<string, unknown>
-}
+import type { SceneProps } from '@/types'
+import { clamp, easeOutCubic, spring, resolveSceneColors, FONTS } from '@/lib/video'
 
 interface CTAData {
   headline: string
@@ -22,21 +17,6 @@ interface CTAData {
   }
 }
 
-function clamp(value: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, value))
-}
-
-function easeOutCubic(t: number) {
-  return 1 - Math.pow(1 - t, 3)
-}
-
-function springInterpolation(t: number) {
-  if (t <= 0) return 0
-  if (t >= 1) return 1
-  const decay = Math.exp(-6 * t)
-  return 1 - decay * Math.cos(12 * t * Math.PI * 0.15)
-}
-
 export function CTAScene({ isActive, progress, onComplete, data }: SceneProps) {
   const {
     headline = 'Get Started Today',
@@ -45,17 +25,15 @@ export function CTAScene({ isActive, progress, onComplete, data }: SceneProps) {
     colors,
   } = data as unknown as CTAData
 
-  const bg = colors?.bg ?? '#0d1117'
-  const textColor = colors?.text ?? '#e6edf3'
-  const accent = colors?.accent ?? '#7c3aed'
+  const { bg, text: textColor, accent } = resolveSceneColors(colors)
   const gradientFrom = colors?.gradientFrom ?? accent
   const gradientTo = colors?.gradientTo ?? '#06b6d4'
 
   // Timing: glow 0-0.3, headline 0.1-0.5, subtext 0.3-0.6, button 0.45-0.75, pulse 0.75-1.0
   const glowProgress = easeOutCubic(clamp(progress / 0.3, 0, 1))
-  const headlineProgress = springInterpolation(clamp((progress - 0.1) / 0.4, 0, 1))
+  const headlineProgress = spring(clamp((progress - 0.1) / 0.4, 0, 1))
   const subtextProgress = easeOutCubic(clamp((progress - 0.3) / 0.3, 0, 1))
-  const buttonProgress = springInterpolation(clamp((progress - 0.45) / 0.3, 0, 1))
+  const buttonProgress = spring(clamp((progress - 0.45) / 0.3, 0, 1))
   const pulsePhase = clamp((progress - 0.75) / 0.25, 0, 1)
 
   // Pulsing effect for the button glow after it appears
@@ -79,8 +57,7 @@ export function CTAScene({ isActive, progress, onComplete, data }: SceneProps) {
         justifyContent: 'center',
         padding: 'clamp(1.5rem, 3vw, 2rem) clamp(1.5rem, 4vw, 4rem)',
         overflow: 'hidden',
-        fontFamily:
-          "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+        fontFamily: FONTS.primary,
       }}
     >
       {/* Central glow burst */}

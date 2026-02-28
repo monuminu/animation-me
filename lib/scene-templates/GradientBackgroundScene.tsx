@@ -1,13 +1,8 @@
 'use client'
 
 import { motion } from 'framer-motion'
-
-interface SceneProps {
-  isActive: boolean
-  progress: number
-  onComplete: () => void
-  data: Record<string, unknown>
-}
+import { clamp, easeOutCubic, spring, resolveSceneColors, FONTS } from '@/lib/video'
+import type { SceneProps } from '@/types'
 
 interface GradientBackgroundData {
   headline?: string
@@ -19,21 +14,6 @@ interface GradientBackgroundData {
   }
 }
 
-function clamp(value: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, value))
-}
-
-function easeOutCubic(t: number) {
-  return 1 - Math.pow(1 - t, 3)
-}
-
-function springInterpolation(t: number) {
-  if (t <= 0) return 0
-  if (t >= 1) return 1
-  const decay = Math.exp(-6 * t)
-  return 1 - decay * Math.cos(12 * t * Math.PI * 0.15)
-}
-
 export function GradientBackgroundScene({ isActive, progress, onComplete, data }: SceneProps) {
   const {
     headline,
@@ -42,8 +22,7 @@ export function GradientBackgroundScene({ isActive, progress, onComplete, data }
     colors,
   } = data as unknown as GradientBackgroundData
 
-  const bg = colors?.bg ?? '#0d1117'
-  const textColor = colors?.text ?? '#e6edf3'
+  const { bg, text: textColor } = resolveSceneColors(colors)
 
   const gc = gradientColors && gradientColors.length >= 2
     ? gradientColors
@@ -51,7 +30,7 @@ export function GradientBackgroundScene({ isActive, progress, onComplete, data }
 
   // Timing: blobs fade in 0-0.3, movement 0-1.0, headline 0.15-0.5, subtitle 0.35-0.7
   const blobFadeIn = easeOutCubic(clamp(progress / 0.3, 0, 1))
-  const headlineProgress = springInterpolation(clamp((progress - 0.15) / 0.35, 0, 1))
+  const headlineProgress = spring(clamp((progress - 0.15) / 0.35, 0, 1))
   const subtitleProgress = easeOutCubic(clamp((progress - 0.35) / 0.35, 0, 1))
 
   // Blob movement driven by progress — each blob moves on a unique path
@@ -95,8 +74,7 @@ export function GradientBackgroundScene({ isActive, progress, onComplete, data }
         justifyContent: 'center',
         padding: 'clamp(1.5rem, 3vw, 3rem) clamp(1.5rem, 4vw, 4rem)',
         overflow: 'hidden',
-        fontFamily:
-          "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+        fontFamily: FONTS.primary,
       }}
     >
       {/* Gradient blobs */}

@@ -1,13 +1,8 @@
 'use client'
 
 import { motion } from 'framer-motion'
-
-interface SceneProps {
-  isActive: boolean
-  progress: number
-  onComplete: () => void
-  data: Record<string, unknown>
-}
+import type { SceneProps } from '@/types'
+import { clamp, easeOutCubic, resolveSceneColors, FONTS } from '@/lib/video'
 
 interface TextRevealData {
   headline: string
@@ -18,10 +13,6 @@ interface TextRevealData {
     text: string
     accent: string
   }
-}
-
-function clamp(value: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, value))
 }
 
 function WordByWordReveal({
@@ -99,7 +90,7 @@ function TypewriterReveal({
       style={{
         fontSize: isSubtitle ? 'clamp(1rem, 2.5vw, 1.5rem)' : 'clamp(1.8rem, 5vw, 3.5rem)',
         fontWeight: isSubtitle ? 400 : 700,
-        fontFamily: "'SF Mono', 'Fira Code', 'Consolas', monospace",
+        fontFamily: FONTS.monoAlt,
         color: textColor,
         letterSpacing: '-0.01em',
         lineHeight: 1.3,
@@ -150,7 +141,7 @@ function FadeUpReveal({
     >
       {lines.map((line, i) => {
         const lineProgress = clamp((progress * lines.length - i) * 1.2, 0, 1)
-        const eased = 1 - Math.pow(1 - lineProgress, 3)
+        const eased = easeOutCubic(lineProgress)
 
         return (
           <div
@@ -181,9 +172,7 @@ export function TextRevealScene({ isActive, progress, onComplete, data }: SceneP
     colors,
   } = data as unknown as TextRevealData
 
-  const bg = colors?.bg ?? '#0d1117'
-  const textColor = colors?.text ?? '#e6edf3'
-  const accent = colors?.accent ?? '#7c3aed'
+  const { bg, text: textColor, accent } = resolveSceneColors(colors)
 
   // Split progress: headline gets 0-0.65, subtitle gets 0.55-1.0 (overlap for smooth feel)
   const headlineProgress = subtitle ? clamp(progress / 0.65, 0, 1) : progress
@@ -245,8 +234,7 @@ export function TextRevealScene({ isActive, progress, onComplete, data }: SceneP
         justifyContent: 'center',
         padding: 'clamp(1rem, 3vw, 2rem) clamp(1.5rem, 4vw, 4rem)',
         overflow: 'hidden',
-        fontFamily:
-          "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+        fontFamily: FONTS.primary,
       }}
     >
       {/* Subtle radial glow */}

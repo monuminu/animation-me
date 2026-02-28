@@ -1,13 +1,8 @@
 'use client'
 
 import { motion } from 'framer-motion'
-
-interface SceneProps {
-  isActive: boolean
-  progress: number
-  onComplete: () => void
-  data: Record<string, unknown>
-}
+import type { SceneProps } from '@/types'
+import { clamp, easeOutCubic, spring, resolveSceneColors, FONTS } from '@/lib/video'
 
 interface HeroData {
   headline: string
@@ -20,22 +15,6 @@ interface HeroData {
   }
 }
 
-function clamp(value: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, value))
-}
-
-function easeOutCubic(t: number) {
-  return 1 - Math.pow(1 - t, 3)
-}
-
-function springInterpolation(t: number) {
-  // Simulates a spring overshoot: goes past 1.0 then settles
-  if (t <= 0) return 0
-  if (t >= 1) return 1
-  const decay = Math.exp(-6 * t)
-  return 1 - decay * Math.cos(12 * t * Math.PI * 0.15)
-}
-
 export function HeroScene({ isActive, progress, onComplete, data }: SceneProps) {
   const {
     headline = 'Welcome',
@@ -44,14 +23,12 @@ export function HeroScene({ isActive, progress, onComplete, data }: SceneProps) 
     colors,
   } = data as unknown as HeroData
 
-  const bg = colors?.bg ?? '#0d1117'
-  const textColor = colors?.text ?? '#e6edf3'
-  const accent = colors?.accent ?? '#7c3aed'
+  const { bg, text: textColor, accent } = resolveSceneColors(colors)
 
   // Staggered timing: headline 0-0.4, subheadline 0.2-0.6, CTA 0.4-0.8, settle 0.8-1.0
   const headlineProgress = easeOutCubic(clamp(progress / 0.4, 0, 1))
   const subheadlineProgress = easeOutCubic(clamp((progress - 0.2) / 0.4, 0, 1))
-  const ctaProgress = springInterpolation(clamp((progress - 0.4) / 0.4, 0, 1))
+  const ctaProgress = spring(clamp((progress - 0.4) / 0.4, 0, 1))
   const glowProgress = clamp(progress / 0.6, 0, 1)
 
   if (progress >= 1 && isActive) {
@@ -71,8 +48,7 @@ export function HeroScene({ isActive, progress, onComplete, data }: SceneProps) 
         justifyContent: 'center',
         padding: 'clamp(1.5rem, 3vw, 2rem) clamp(1.5rem, 4vw, 4rem)',
         overflow: 'hidden',
-        fontFamily:
-          "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+        fontFamily: FONTS.primary,
       }}
     >
       {/* Gradient accent glow behind headline */}

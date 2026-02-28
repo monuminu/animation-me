@@ -10,7 +10,7 @@ const anthropic = new AnthropicFoundry({
 const TEMPLATE_SCHEMAS = `
 ## Available Scene Templates
 
-You MUST output a valid JSON animation config using ONLY these template names. Each scene has a "template" key and a "data" object matching the schema below.
+You MUST output a valid JSON animation config using ONLY these template names. Each scene has a "template" key, a "data" object matching the schema below, and an optional "transition" object.
 
 ### 1. TextRevealScene
 data: { headline: string, subtitle?: string, style?: "word-by-word" | "typewriter" | "fade-up", colors?: { bg: string, text: string, accent: string } }
@@ -53,6 +53,52 @@ data: { title?: string, logos: [{ name: string, logoUrl?: string }], colors?: { 
 
 ### 14. PricingTableScene
 data: { title?: string, plans: [{ name: string, price: string, period?: string, features: string[], highlighted?: boolean }], colors?: { bg: string, text: string, accent: string } }
+
+### 15. FeatureGridScene
+data: { title?: string, features: [{ title: string, description?: string, icon?: string }], colors?: { bg: string, text: string, accent: string, cardBg?: string } } (Features can be maximum 4)
+
+## Scene Transitions
+
+Each scene can include an optional "transition" property that controls how it transitions to the NEXT scene. If omitted, a simple fade is used.
+
+\`\`\`
+"transition": { "type": "fadeBlur", "duration": 500 }
+\`\`\`
+
+### Available Transition Types
+
+| Type | Effect | Default Duration | Best For |
+|------|--------|-----------------|----------|
+| \`none\` | Instant cut | 0ms | Music-driven cuts, same visual style continues |
+| \`fade\` | Simple opacity crossfade | 300ms | Safe default, thematically different scenes |
+| \`fadeBlur\` | Fade + blur | 400ms | Dreamy, cinematic feel |
+| \`scaleFade\` | Scale + fade | 400ms | Zoom-style transitions |
+| \`slideLeft\` | Next slides in from right | 500ms | Sequential content, timeline progression |
+| \`slideRight\` | Next slides in from left | 500ms | Going back, reverse progression |
+| \`slideUp\` | Next slides in from bottom | 500ms | Revealing content below, upward energy |
+| \`slideDown\` | Next slides in from top | 500ms | Dropdown reveals |
+| \`wipe\` | Left-to-right clip-path reveal | 600ms | Dramatic reveals, before/after |
+| \`zoomThrough\` | Current zooms in, next scales up | 500ms | Diving deeper into content |
+| \`crossDissolve\` | Extended overlap dissolve | 500ms | Smooth mood shifts |
+| \`clipCircle\` | Radial circle reveal from center | 600ms | Spotlight reveals, dramatic moments |
+| \`perspectiveFlip\` | 3D card flip | 600ms | Playful, comparing two sides |
+| \`morphExpand\` | Scale from center point | 500ms | Expanding content, zoom into detail |
+| \`splitHorizontal\` | Horizontal curtain open | 500ms | Theatrical reveals |
+| \`splitVertical\` | Vertical curtain | 500ms | Theatrical reveals |
+| \`pushLeft\` | Both scenes push together left | 500ms | Strong directional flow |
+| \`pushRight\` | Both scenes push together right | 500ms | Strong directional flow |
+
+### Transition Best Practices
+
+- **The first scene should NOT have a transition** (it's the starting state)
+- **Use 1-2 transition types max** per animation for consistency
+- **fade is always safe** — use it when in doubt
+- **fadeBlur** is great for cinematic/premium feel
+- **slideLeft** works well for sequential content (features, timeline)
+- **wipe** is perfect for before/after comparisons
+- **clipCircle** creates dramatic focal reveals — use sparingly
+- **Transition duration** should be 10-15% of the shorter scene's duration
+- **Never exceed 800ms** for transitions
 `
 
 function buildSystemPrompt(): string {
@@ -91,11 +137,14 @@ The JSON config format:
       "id": "unique-scene-id",
       "template": "TemplateName",
       "duration": 4000,
-      "data": { ... }
+      "data": { ... },
+      "transition": { "type": "fade", "duration": 400 }
     }
   ]
 }
 \`\`\`
+
+**Note:** The "transition" on each scene controls how it transitions to the NEXT scene. The first scene typically has no transition. See the "Scene Transitions" section below for all 18 available types.
 
 ${TEMPLATE_SCHEMAS}
 

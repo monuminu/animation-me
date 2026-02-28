@@ -1,13 +1,8 @@
 'use client'
 
 import { motion } from 'framer-motion'
-
-interface SceneProps {
-  isActive: boolean
-  progress: number
-  onComplete: () => void
-  data: Record<string, unknown>
-}
+import { clamp, easeOutCubic, easeOutQuart, resolveSceneColors, FONTS } from '@/lib/video'
+import type { SceneProps } from '@/types'
 
 interface ComparisonSide {
   label: string
@@ -23,18 +18,6 @@ interface ComparisonData {
     text: string
     accent: string
   }
-}
-
-function clamp(value: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, value))
-}
-
-function easeOutCubic(t: number) {
-  return 1 - Math.pow(1 - t, 3)
-}
-
-function easeOutQuart(t: number) {
-  return 1 - Math.pow(1 - t, 4)
 }
 
 function ComparisonCard({
@@ -171,9 +154,7 @@ export function ComparisonScene({ isActive, progress, onComplete, data }: SceneP
     colors,
   } = data as unknown as ComparisonData
 
-  const bg = colors?.bg ?? '#0d1117'
-  const textColor = colors?.text ?? '#e6edf3'
-  const accent = colors?.accent ?? '#7c3aed'
+  const { bg, text: textColor, accent } = resolveSceneColors(colors)
 
   // Title: 0-0.2, Before card: 0.1-0.4, VS badge: 0.35-0.55, After card: 0.4-0.7
   // Before items: 0.25-0.55, After items: 0.5-0.85
@@ -199,8 +180,7 @@ export function ComparisonScene({ isActive, progress, onComplete, data }: SceneP
         justifyContent: 'center',
         padding: 'clamp(1.5rem, 3vw, 3rem) clamp(1.5rem, 3vw, 3rem)',
         overflow: 'hidden',
-        fontFamily:
-          "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+        fontFamily: FONTS.primary,
       }}
     >
       {/* Background gradient */}

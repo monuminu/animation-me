@@ -1,13 +1,8 @@
 'use client'
 
 import { motion } from 'framer-motion'
-
-interface SceneProps {
-  isActive: boolean
-  progress: number
-  onComplete: () => void
-  data: Record<string, unknown>
-}
+import { clamp, easeOutCubic, resolveSceneColors, FONTS } from '@/lib/video'
+import type { SceneProps } from '@/types'
 
 interface CodeBlockData {
   title?: string
@@ -18,14 +13,6 @@ interface CodeBlockData {
     text: string
     accent: string
   }
-}
-
-function clamp(value: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, value))
-}
-
-function easeOutCubic(t: number) {
-  return 1 - Math.pow(1 - t, 3)
 }
 
 // Simple syntax highlighting by token type
@@ -103,9 +90,7 @@ export function CodeBlockScene({ isActive, progress, onComplete, data }: ScenePr
     colors,
   } = data as unknown as CodeBlockData
 
-  const bg = colors?.bg ?? '#0d1117'
-  const textColor = colors?.text ?? '#e6edf3'
-  const accent = colors?.accent ?? '#7c3aed'
+  const { bg, text: textColor, accent } = resolveSceneColors(colors)
 
   const lines = code.split('\n')
   const totalChars = code.length
@@ -171,8 +156,7 @@ export function CodeBlockScene({ isActive, progress, onComplete, data }: ScenePr
         justifyContent: 'center',
         padding: 'clamp(1.5rem, 3vw, 2.5rem) clamp(1rem, 3vw, 3rem)',
         overflow: 'hidden',
-        fontFamily:
-          "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+        fontFamily: FONTS.primary,
       }}
     >
       {/* Background glow */}
@@ -248,18 +232,17 @@ export function CodeBlockScene({ isActive, progress, onComplete, data }: ScenePr
               marginLeft: '12px',
               fontSize: '0.75rem',
               color: '#484f58',
-              fontFamily: "'JetBrains Mono', 'Fira Code', 'Consolas', monospace",
+              fontFamily: FONTS.mono,
             }}
           >
-            {language}
-          </span>
+            {language}</span>
         </div>
 
         {/* Code content */}
         <div
           style={{
             padding: '1.25rem 1.5rem',
-            fontFamily: "'JetBrains Mono', 'Fira Code', 'Consolas', monospace",
+            fontFamily: FONTS.mono,
             fontSize: 'clamp(0.7rem, 1vw, 0.85rem)',
             lineHeight: 1.8,
             minHeight: '200px',

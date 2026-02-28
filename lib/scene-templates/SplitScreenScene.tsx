@@ -1,13 +1,8 @@
 'use client'
 
 import { motion } from 'framer-motion'
-
-interface SceneProps {
-  isActive: boolean
-  progress: number
-  onComplete: () => void
-  data: Record<string, unknown>
-}
+import { clamp, easeOutCubic, easeOutQuint, resolveSceneColors, FONTS } from '@/lib/video'
+import type { SceneProps } from '@/types'
 
 interface SplitScreenData {
   headline: string
@@ -21,18 +16,6 @@ interface SplitScreenData {
   }
 }
 
-function clamp(value: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, value))
-}
-
-function easeOutCubic(t: number) {
-  return 1 - Math.pow(1 - t, 3)
-}
-
-function easeOutQuint(t: number) {
-  return 1 - Math.pow(1 - t, 5)
-}
-
 export function SplitScreenScene({ isActive, progress, onComplete, data }: SceneProps) {
   const {
     headline = 'Split Screen',
@@ -42,9 +25,7 @@ export function SplitScreenScene({ isActive, progress, onComplete, data }: Scene
     colors,
   } = data as unknown as SplitScreenData
 
-  const bg = colors?.bg ?? '#0d1117'
-  const textColor = colors?.text ?? '#e6edf3'
-  const accent = colors?.accent ?? '#7c3aed'
+  const { bg, text: textColor, accent } = resolveSceneColors(colors)
 
   const isLeftText = direction === 'left-text'
 
@@ -223,8 +204,7 @@ export function SplitScreenScene({ isActive, progress, onComplete, data }: Scene
         flexWrap: 'wrap',
         alignItems: 'stretch',
         overflow: 'hidden',
-        fontFamily:
-          "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+        fontFamily: FONTS.primary,
       }}
     >
       {/* Subtle center divider glow */}

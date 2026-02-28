@@ -7,7 +7,28 @@ export interface Scene {
 }
 
 export interface TransitionConfig {
-  type: 'fade' | 'slide' | 'wipe' | 'morph' | 'none'
+  type:
+    | 'none'
+    | 'fade'
+    | 'fadeBlur'
+    | 'scaleFade'
+    | 'slideLeft'
+    | 'slideRight'
+    | 'slideUp'
+    | 'slideDown'
+    | 'wipe'
+    | 'zoomThrough'
+    | 'crossDissolve'
+    | 'clipCircle'
+    | 'perspectiveFlip'
+    | 'morphExpand'
+    | 'splitHorizontal'
+    | 'splitVertical'
+    | 'pushLeft'
+    | 'pushRight'
+    // Backward-compat aliases
+    | 'slide'
+    | 'morph'
   duration?: number
 }
 
@@ -123,4 +144,10 @@ export interface CanvasPreset {
   width: number
   height: number
   category: 'standard' | 'iphone' | 'pixel' | 'samsung'
+}
+
+export interface RecordingState {
+  isRecording: boolean
+  hasStarted: boolean
+  hasEnded: boolean
 }

@@ -3,10 +3,32 @@
 import { useEffect, useRef, useCallback } from 'react'
 import { useProjectStore } from '@/stores/project-store'
 
+// Extend Window interface for recording bridge
+declare global {
+  interface Window {
+    startRecording?: () => void
+    stopRecording?: () => void
+    __animationMe_startRecording?: () => void
+    __animationMe_stopRecording?: () => void
+  }
+}
+
 export function usePlayback() {
   const { playback, animationConfig, setPlayback } = useProjectStore()
   const rafRef = useRef<number | null>(null)
   const lastTimeRef = useRef<number>(0)
+  const hasSignaledStartRef = useRef<boolean>(false)
+  const hasCompletedOnceRef = useRef<boolean>(false)
+  const prevConfigRef = useRef<typeof animationConfig>(null)
+
+  // Reset recording refs when animationConfig changes
+  useEffect(() => {
+    if (animationConfig !== prevConfigRef.current) {
+      hasSignaledStartRef.current = false
+      hasCompletedOnceRef.current = false
+      prevConfigRef.current = animationConfig
+    }
+  }, [animationConfig])
 
   const tick = useCallback((timestamp: number) => {
     const state = useProjectStore.getState()
@@ -21,6 +43,18 @@ export function usePlayback() {
       lastTimeRef.current = timestamp
     }
 
+    // Signal recording start on first play tick
+    if (!hasSignaledStartRef.current) {
+      hasSignaledStartRef.current = true
+      try {
+        window.startRecording?.()
+        window.__animationMe_startRecording?.()
+      } catch {
+        // Silently ignore — recording bridge is optional
+      }
+      state.setRecording({ isRecording: true, hasStarted: true })
+    }
+
     const delta = (timestamp - lastTimeRef.current) * pb.speed
     lastTimeRef.current = timestamp
 
@@ -28,6 +62,17 @@ export function usePlayback() {
 
     // Loop back to start when done
     if (newTime >= pb.totalDuration) {
+      // Signal recording stop on first complete pass
+      if (!hasCompletedOnceRef.current) {
+        hasCompletedOnceRef.current = true
+        try {
+          window.stopRecording?.()
+          window.__animationMe_stopRecording?.()
+        } catch {
+          // Silently ignore
+        }
+        state.setRecording({ isRecording: false, hasEnded: true })
+      }
       newTime = 0
     }
 
@@ -93,5 +138,7 @@ export function usePlayback() {
     lastTimeRef.current = 0
   }, [setPlayback])
 
-  return { seekTo }
+  const hasEnded = useProjectStore((s) => s.recording.hasEnded)
+
+  return { seekTo, hasEnded }
 }

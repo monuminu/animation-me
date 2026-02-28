@@ -2,54 +2,102 @@
 
 Use this skill when determining how scenes transition from one to another.
 
-## Transition Types
+## How Transitions Work
 
-### Fade (Default)
-- Cross-dissolve between scenes
-- Duration: 300–500ms
-- Use when: Scenes are thematically different, calm pacing
-- Implementation: opacity 1 → 0 for outgoing, 0 → 1 for incoming
+Each scene can include an optional `transition` property in the animation config:
+```json
+{
+  "id": "scene-1",
+  "template": "HeroScene",
+  "duration": 5000,
+  "transition": { "type": "fadeBlur", "duration": 500 },
+  "data": { ... }
+}
+```
 
-### Slide
-- Incoming scene slides in from a direction
-- Duration: 400–600ms
-- Directions: left, right, up, down
-- Use when: Sequential content, timeline progression
-- Ease: `cubic-bezier(0.16, 1, 0.3, 1)`
+The `transition` on a scene controls how it exits into the NEXT scene. During the last N milliseconds (the transition duration), both the current and next scene render simultaneously with the transition effect applied.
 
-### Wipe
-- Reveal line sweeps across, showing new scene underneath
-- Duration: 500–700ms
-- Use when: Dramatic reveals, before/after comparisons
-- Implementation: clip-path animation
+## Available Transition Types (18)
 
-### Morph
-- Elements transform between positions/states
-- Duration: 600–800ms
-- Use when: Same data, different view
-- Most complex — reserve for special moments
+### Basic
+| Type | Effect | Default Duration | Description |
+|------|--------|-----------------|-------------|
+| `none` | Instant cut | 0ms | Hard cut between scenes |
+| `fade` | Opacity crossfade | 300ms | Simple, safe, always works |
+| `crossDissolve` | Extended overlap dissolve | 500ms | Smoother than fade, more overlap |
 
-### None
-- Instant cut between scenes
-- Duration: 0ms
-- Use when: Same visual style continues, music-driven cuts
+### Cinematic
+| Type | Effect | Default Duration | Description |
+|------|--------|-----------------|-------------|
+| `fadeBlur` | Fade + 12px blur | 400ms | Dreamy, premium, cinematic |
+| `scaleFade` | Scale 0.92→1 + fade | 400ms | Subtle zoom transition |
+| `zoomThrough` | Current zooms in, next scales up | 500ms | Diving deeper into content |
+| `clipCircle` | Radial circle reveal from center | 600ms | Spotlight/dramatic reveal |
+
+### Directional
+| Type | Effect | Default Duration | Description |
+|------|--------|-----------------|-------------|
+| `slideLeft` | Next slides in from right | 500ms | Sequential content flow |
+| `slideRight` | Next slides in from left | 500ms | Reverse direction flow |
+| `slideUp` | Next slides in from bottom | 500ms | Upward energy, reveals |
+| `slideDown` | Next slides in from top | 500ms | Dropdown reveals |
+| `pushLeft` | Both scenes push left together | 500ms | Strong directional momentum |
+| `pushRight` | Both scenes push right together | 500ms | Strong directional momentum |
+| `wipe` | Left-to-right clip-path reveal | 600ms | Dramatic sweeping reveal |
+
+### Theatrical
+| Type | Effect | Default Duration | Description |
+|------|--------|-----------------|-------------|
+| `perspectiveFlip` | 3D card flip (rotateY) | 600ms | Playful, comparing two sides |
+| `morphExpand` | Scale from center point | 500ms | Expanding into new content |
+| `splitHorizontal` | Horizontal curtain open | 500ms | Theatrical, cinematic reveals |
+| `splitVertical` | Vertical curtain open | 500ms | Theatrical, cinematic reveals |
+
+### Backward-Compatible Aliases
+- `slide` → maps to `slideLeft`
+- `morph` → maps to `morphExpand`
 
 ## When to Use Each
 
-| Scenario | Recommended Transition |
-|----------|----------------------|
-| Intro → Feature | Fade |
-| Feature → Feature | Slide (horizontal) |
-| Feature → Stats | Fade |
-| Stats → CTA | Fade |
-| Before → After | Wipe |
-| Any → Logo Reveal | Fade |
-| Screenshot → Feature | Slide (up) |
+| Scene Flow | Recommended Transition |
+|-----------|----------------------|
+| Intro → Features | `fade` or `fadeBlur` |
+| Feature → Feature | `slideLeft` or `pushLeft` |
+| Feature → Stats | `fade` or `scaleFade` |
+| Stats → CTA | `fadeBlur` or `zoomThrough` |
+| Before → After (Comparison) | `wipe` |
+| Any → Logo Reveal | `fade` or `clipCircle` |
+| Screenshot → Feature | `slideUp` or `scaleFade` |
+| Content → Dramatic moment | `clipCircle` or `splitHorizontal` |
+| Pricing plan comparisons | `slideLeft` |
+| Timeline progression | `slideLeft` or `pushLeft` |
+| Code demo → Explanation | `fadeBlur` or `scaleFade` |
+| Gradient/mood scene → Next | `crossDissolve` |
+
+## Transition Style Combinations
+
+For consistency, pick ONE style family per animation:
+
+### Clean & Professional
+Use: `fade`, `fadeBlur`, `crossDissolve`
+
+### Dynamic & Energetic
+Use: `slideLeft`, `pushLeft`, `slideUp`
+
+### Cinematic & Dramatic
+Use: `fadeBlur`, `clipCircle`, `zoomThrough`
+
+### Theatrical & Playful
+Use: `perspectiveFlip`, `splitHorizontal`, `morphExpand`
 
 ## Rules
-- Use consistent transitions within a single animation
-- Don't mix more than 2 transition types per animation
-- Fade is always safe — when in doubt, use fade
-- Transition duration should be 10-15% of the shorter scene's duration
-- Never make transitions longer than 800ms
-- The first scene should NOT have an entrance transition (it's the starting state)
+
+1. **The first scene should NOT have a transition** — it's the starting state
+2. **Use 1-2 transition types max** per animation for visual consistency
+3. **fade is always safe** — when in doubt, use `fade`
+4. **fadeBlur** is the best upgrade from plain `fade` for premium feel
+5. **Transition duration** should be 10-15% of the shorter scene's duration
+6. **Never exceed 800ms** for transitions — they should be quick
+7. Don't mix more than 2 style families in one animation
+8. **The last scene (CTA)** typically doesn't need a transition since nothing follows it
+9. Match transition energy to content energy — gentle transitions for calm content, dynamic for exciting

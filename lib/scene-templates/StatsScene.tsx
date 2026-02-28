@@ -1,13 +1,8 @@
 'use client'
 
 import { motion } from 'framer-motion'
-
-interface SceneProps {
-  isActive: boolean
-  progress: number
-  onComplete: () => void
-  data: Record<string, unknown>
-}
+import { clamp, easeOutCubic, easeOutExpo, resolveSceneColors, FONTS } from '@/lib/video'
+import type { SceneProps } from '@/types'
 
 interface StatItem {
   value: number
@@ -24,18 +19,6 @@ interface StatsData {
     text: string
     accent: string
   }
-}
-
-function clamp(value: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, value))
-}
-
-function easeOutCubic(t: number) {
-  return 1 - Math.pow(1 - t, 3)
-}
-
-function easeOutExpo(t: number) {
-  return t === 1 ? 1 : 1 - Math.pow(2, -10 * t)
 }
 
 function formatNumber(value: number): string {
@@ -130,9 +113,7 @@ export function StatsScene({ isActive, progress, onComplete, data }: SceneProps)
     colors,
   } = data as unknown as StatsData
 
-  const bg = colors?.bg ?? '#0d1117'
-  const textColor = colors?.text ?? '#e6edf3'
-  const accent = colors?.accent ?? '#7c3aed'
+  const { bg, text: textColor, accent } = resolveSceneColors(colors)
 
   // Title: 0-0.25, Cards stagger: 0.1-0.5, Counter: 0.2-0.85
   const titleProgress = easeOutCubic(clamp(progress / 0.25, 0, 1))
@@ -156,8 +137,7 @@ export function StatsScene({ isActive, progress, onComplete, data }: SceneProps)
         justifyContent: 'center',
         padding: 'clamp(1.5rem, 3vw, 3rem) clamp(1.5rem, 4vw, 4rem)',
         overflow: 'hidden',
-        fontFamily:
-          "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+        fontFamily: FONTS.primary,
       }}
     >
       {/* Background glow */}
