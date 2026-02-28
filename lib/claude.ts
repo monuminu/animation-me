@@ -1,8 +1,10 @@
-import Anthropic from '@anthropic-ai/sdk'
+import AnthropicFoundry from '@anthropic-ai/foundry-sdk'
+import type Anthropic from '@anthropic-ai/sdk'
 import { loadSkills } from './skills'
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY || '',
+const anthropic = new AnthropicFoundry({
+  apiKey: process.env.ANTHROPIC_FOUNDRY_API_KEY || '',
+  baseURL: process.env.ANTHROPIC_FOUNDRY_BASE_URL || '',
 })
 
 const TEMPLATE_SCHEMAS = `
@@ -144,7 +146,7 @@ export async function* streamAnimation(
   ]
 
   const stream = anthropic.messages.stream({
-    model: 'claude-sonnet-4-20250514',
+    model: process.env.ANTHROPIC_FOUNDRY_DEPLOYMENT || 'claude-sonnet-4-6',
     max_tokens: 4096,
     system: systemPrompt,
     messages,
