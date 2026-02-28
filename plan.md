@@ -1,300 +1,293 @@
-╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌
- animation.me — Full MVP Implementation Plan                                                                                                                                                                    
-                                                        
- Context
+# Export MP4 — Implementation Plan
 
- animation.me is a text-to-animation engine that generates production-ready, programmatic motion graphics from natural language prompts. The project is 100% greenfield — only CLAUDE.md (the spec) and
- product.png (reference screenshot) exist. No code, no dependencies, no config files.
+## Overview
 
- The goal is to build a Full MVP (Phases 1-5) that delivers a working product: type a prompt → Claude generates animation configs → see live animated preview in a professional 3-panel studio interface.
+Implement in-browser MP4 export using **mediabunny** (already installed as `mediabunny@1.35.1`). The export uses the canvas preset size selected in the Studio's PreviewPanel dropdown as the video resolution. The animation is rendered frame-by-frame to an OffscreenCanvas at the target resolution, encoded via mediabunny's `CanvasSource` + `Mp4OutputFormat`, and downloaded as an MP4 file.
 
- Key decisions:
- - Build the Studio (3-panel builder) first, landing page second
- - Use template-based engine — Claude outputs JSON scene configs mapping to ~15 pre-built Framer Motion templates
- - Create spec files in _specs/ folder, then implement one spec at a time
+---
 
- ---
- Implementation Phases
+## Architecture
 
- Phase 1: Foundation — Project Setup
+```
+User clicks "Export" in TopBar
+        │
+        ▼
+  ExportModal opens
+  ├── Shows selected canvas preset (e.g., 1920×1080)
+  ├── Quality picker (Low / Medium / High)
+  ├── FPS picker (24 / 30 / 60)
+  └── "Export MP4" button
+        │
+        ▼
+  useExportMP4 hook kicks off
+  ├── 1. Pause current playback
+  ├── 2. Create OffscreenCanvas at preset dimensions
+  ├── 3. Create mediabunny Output + CanvasSource
+  ├── 4. Frame-by-frame loop:
+  │      for each frame (0 → totalFrames):
+  │        a. Calculate currentTime = frame / fps
+  │        b. Determine currentSceneIndex + progress
+  │        c. Render scene to OffscreenCanvas via html2canvas-style capture
+  │           (actually: render React scenes into a hidden DOM container,
+  │            then use dom-to-canvas capture per frame)
+  │        d. Call videoSource.add(timestamp, 1/fps)
+  ├── 5. Finalize output
+  ├── 6. Create Blob from buffer → trigger download
+  └── 7. Restore playback state
+```
 
- Spec file: _specs/01-foundation.md
+### Key Challenge: React → Canvas
 
- What: Initialize Next.js 14 project with all dependencies, configs, types, Zustand store, and UI primitives.
+The animations are React components (divs, text, CSS transforms) — not drawn on a `<canvas>`. To capture each frame for mediabunny's `CanvasSource`, we need to rasterize the DOM at each time step. The approach:
 
- Files to create:
- - package.json — via npx create-next-app@14
- - tailwind.config.ts — custom dark theme colors (bg: #0a0a0b, accent: #7c3aed), fonts (Inter), animation keyframes
- - app/layout.tsx — dark theme root layout with Inter font via next/font/google
- - app/globals.css — dark scrollbar styling, selection color, CSS reset additions
- - .env.local — ANTHROPIC_API_KEY only for MVP
- - .env.example — all vars from CLAUDE.md section 9 (commented)
- - types/index.ts — Scene, Project, ChatMessage, BrandKit, VisualContext, FileAttachment interfaces
- - stores/project-store.ts — Zustand store for project state, chat messages, scenes, playback, UI state
- - lib/utils.ts — cn() helper using clsx + tailwind-merge
- - components/ui/button.tsx — button with variants (primary/secondary/ghost), sizes, loading
- - components/ui/input.tsx — styled text input
- - components/ui/scroll-area.tsx — Radix scroll area wrapper
- - components/ui/tooltip.tsx — Radix tooltip wrapper
- - Directory skeleton: app/studio/[projectId]/, app/api/animate/, components/studio/, skills/, lib/, hooks/
+1. **Create a hidden container** (`div`) at the exact export dimensions (e.g., 1920×1080px), positioned offscreen.
+2. **For each frame**: set the playback time, let React render the scene, then use the **`html-to-image`** library (`toCanvas()`) to rasterize the container to a canvas.
+3. **Feed that canvas** to mediabunny's encoder.
 
- Dependencies:
- framer-motion gsap three @react-three/fiber @react-three/drei
- @anthropic-ai/sdk
- lucide-react clsx tailwind-merge
- zustand nanoid react-dropzone
- @radix-ui/react-dialog @radix-ui/react-tabs @radix-ui/react-tooltip
- @radix-ui/react-scroll-area @radix-ui/react-separator
+We'll add `html-to-image` as a dependency (lightweight, ~7KB gzipped, no external dependencies).
 
- Exit criteria: npm run dev works, dark page renders at localhost:3000
+---
 
- ---
- Phase 2: Studio Core — 3-Panel Layout
+## Files to Create / Modify
 
- Spec file: _specs/02-studio-layout.md
+### New Files
 
- What: Build the 3-panel studio matching the reference screenshot (product.png).
+| File | Purpose |
+|------|---------|
+| `hooks/useExportMP4.ts` | Core export hook — orchestrates the frame-by-frame encoding pipeline |
+| `components/studio/ExportModal.tsx` | Full export modal UI (replace current empty placeholder) |
+| `components/ExportRenderer.tsx` | Hidden offscreen renderer that renders animation at export resolution |
+| `lib/export-utils.ts` | Helper functions: frame calculation, time-to-scene mapping, download trigger |
 
- Layout:
- ┌─────────────────────────────────────────────────────────────┐
- │  TopBar: [animation.me] [progress] [Preview] [Export]       │
- ├──────────────┬──────────────────────────┬───────────────────┤
- │  ChatPanel   │     PreviewPanel         │  FileTreePanel    │
- │  (~300px)    │     (flex-1)             │  (~280px)         │
- │              │                          │                   │
- │  Messages    │  ┌────────────────────┐  │  📁 src/          │
- │  + prompt    │  │  Animation Canvas  │  │    components/    │
- │  input       │  │  (16:9, #0d1117)   │  │    scenes/        │
- │              │  └────────────────────┘  │                   │
- │              │  [◀ ▶ ━━━●━━━ 0:12]     │  [Code viewer]    │
- ├──────────────┴──────────────────────────┴───────────────────┤
- │  BottomBar: [⚡Build] [quick iteration input...] [Send]     │
- └─────────────────────────────────────────────────────────────┘
+### Modified Files
 
- Files to create:
- - app/studio/[projectId]/page.tsx — studio page, orchestrates layout
- - app/studio/page.tsx — redirect to /studio/new
- - components/studio/StudioLayout.tsx — CSS Grid 3-panel layout with drag-to-resize handles
- - components/studio/TopBar.tsx — logo, progress indicator, tabs, export button
- - components/studio/BottomBar.tsx — build button + quick iteration input
- - components/studio/ChatPanel.tsx — scrollable message area + prompt textarea + attach button
- - components/studio/ChatMessage.tsx — user/assistant message bubbles with markdown rendering
- - components/studio/PreviewPanel.tsx — 16:9 canvas container with empty state
- - components/studio/PlaybackControls.tsx — play/pause, scrubber, timestamp, speed control
- - components/studio/FileTreePanel.tsx — folder/file tree + code viewer
- - components/studio/FileTreeItem.tsx — individual tree node with expand/collapse
- - components/studio/CodeViewer.tsx — read-only syntax-highlighted code display
- - hooks/useResizePanel.ts — drag-to-resize panel widths (min-width constraints)
+| File | Change |
+|------|--------|
+| `components/studio/TopBar.tsx` | Wire Export button to open ExportModal |
+| `stores/project-store.ts` | Add `isExportModalOpen`, `exportProgress`, `isExporting` state + actions |
+| `types/index.ts` | Add `ExportConfig` interface |
+| `package.json` | Add `html-to-image` dependency |
 
- Key details:
- - Panels resize via drag handles (4px wide dividers with cursor: col-resize)
- - Chat panel: auto-scroll to bottom, "AI is thinking..." animated dots, URL detection highlighting
- - Preview: centered 16:9 aspect ratio box, dark bg, empty state with "Your animation will appear here"
- - File tree: virtual files representing generated scenes, click to select + view code
- - Playback: requestAnimationFrame timer in usePlayback.ts hook
+---
 
- Exit criteria: /studio/new renders the 3-panel layout, panels resize, chat input works, empty state shows in preview
+## Detailed Implementation
 
- ---
- Phase 3: Animation Engine — Core Loop
+### Step 1: Install dependency
 
- Spec file: _specs/03-animation-engine.md
+```bash
+npm install html-to-image
+```
 
- What: Wire Claude AI to generate animation configs, parse responses, render scenes via templates, enable full prompt → preview → iterate loop.
+### Step 2: Add types (`types/index.ts`)
 
- Files to create:
+```ts
+export interface ExportConfig {
+  width: number
+  height: number
+  fps: 24 | 30 | 60
+  quality: 'low' | 'medium' | 'high'
+  format: 'mp4'
+}
 
- API & lib:
- - app/api/animate/route.ts — POST endpoint: receives prompt + messages, calls Claude with streaming, returns SSE
- - lib/claude.ts — Anthropic SDK client, system prompt builder, content block builder
- - lib/skills.ts — loads SKILL.md files from /skills/ directory
- - lib/url-detector.ts — regex URL detection from prompt text
- - lib/parse-animation-response.ts — parses Claude's streamed response into description + config + scenes
+export interface ExportProgress {
+  phase: 'preparing' | 'rendering' | 'encoding' | 'finalizing' | 'done' | 'error'
+  currentFrame: number
+  totalFrames: number
+  percent: number
+  error?: string
+}
+```
 
- Scene templates (initial 5):
- - lib/scene-templates/TextRevealScene.tsx — word-by-word, typewriter, fade-up text reveals
- - lib/scene-templates/HeroScene.tsx — headline + subheadline + CTA with cinematic entrance
- - lib/scene-templates/FeatureGridScene.tsx — staggered grid of feature cards
- - lib/scene-templates/CTAScene.tsx — call-to-action ending with gradient text
- - lib/scene-templates/LogoRevealScene.tsx — logo/brand animation with scale + type-out
+### Step 3: Update store (`stores/project-store.ts`)
 
- Core components:
- - lib/scene-registry.ts — maps template names → React components
- - components/AnimationPlayer.tsx — scene orchestrator, manages playback timing, renders active scene
- - components/SceneRenderer.tsx — renders individual scene via template lookup
+Add to the store interface and implementation:
+- `isExportModalOpen: boolean`
+- `isExporting: boolean`
+- `exportProgress: ExportProgress | null`
+- `openExportModal()` / `closeExportModal()`
+- `setExportProgress(progress)` / `setIsExporting(boolean)`
 
- Hooks:
- - hooks/useAnimate.ts — handles prompt submission, streaming, response parsing, state updates
- - hooks/usePlayback.ts — requestAnimationFrame timer, scene advancement, time tracking
+### Step 4: Create `lib/export-utils.ts`
 
- Claude output format:
- {
-   "title": "Product Launch Video",
-   "totalDuration": 20000,
-   "scenes": [
-     {
-       "id": "intro",
-       "template": "TextRevealScene",
-       "duration": 4000,
-       "data": {
-         "headline": "Ship with confidence",
-         "style": "word-by-word",
-         "colors": { "bg": "#0d1117", "text": "#ffffff", "accent": "#7c3aed" }
-       }
-     }
-   ]
- }
+```ts
+// Maps a time (ms) to { sceneIndex, progress } — same logic as usePlayback
+export function getSceneAtTime(scenes: Scene[], timeMs: number) → { sceneIndex, progress, elapsed }
 
- System prompt (in lib/claude.ts):
- - Instructs Claude to output: brief description + animation-config JSON block
- - Lists all available templates with their data schemas
- - Includes loaded skill context for quality rules
- - Enforces dark themes, cinematic motion, Framer Motion best practices
+// Triggers file download from ArrayBuffer
+export function downloadMP4(buffer: ArrayBuffer, filename: string)
 
- Scene template interface — every template receives:
- interface SceneProps {
-   isActive: boolean;      // true when this scene should animate
-   progress: number;       // 0 to 1 through scene duration
-   onComplete: () => void;
- }
- // Plus template-specific `data` prop
+// Maps quality string to mediabunny bitrate
+export function getQualityBitrate(quality: 'low' | 'medium' | 'high') → number
+```
 
- End-to-end flow:
- 1. User types prompt in ChatPanel → useAnimate().generate(prompt)
- 2. POST /api/animate with prompt + message history
- 3. Claude streams response with description + animation-config JSON
- 4. Frontend parses response → updates chat message + sets scenes in store
- 5. AnimationPlayer renders scenes using template registry
- 6. PlaybackControls drive currentTime → determines active scene + progress
- 7. User can iterate with follow-up prompts
+### Step 5: Create `components/ExportRenderer.tsx`
 
- Exit criteria: Type a prompt → Claude generates scene config → scenes render in preview → play/pause works → can iterate
+A React component that:
+- Renders an absolutely-positioned, offscreen `<div>` at the exact export width×height
+- Contains `<AnimationPlayer />` (or the same scene rendering logic) driven by a `time` prop rather than playback state
+- Exposes a ref so the parent can read the DOM element for rasterization
 
- ---
- Phase 4: Landing Page
+```tsx
+interface ExportRendererProps {
+  width: number
+  height: number
+  scenes: Scene[]
+  currentTime: number  // controlled externally
+  animationConfig: AnimationConfig
+}
 
- Spec file: _specs/04-landing-page.md
+// Renders animation at exact pixel dimensions, positioned offscreen
+// Uses the same SceneRenderer + transition logic as AnimationPlayer
+// but driven by the currentTime prop instead of playback store
+```
 
- What: Beautiful dark-themed landing page as the product entry point.
+### Step 6: Create `hooks/useExportMP4.ts`
 
- Files to create:
- - app/page.tsx — landing page composition
- - components/landing/Hero.tsx — "Animate everything. Just describe it." with word-by-word Framer Motion reveal, gradient background
- - components/landing/PromptInput.tsx — multi-line textarea with upload button, URL detection, purple "Generate →" button, Cmd+Enter shortcut
- - components/landing/ExamplePrompts.tsx — clickable pills: "Product launch video", "Logo animation", "SaaS demo reel", "3D showcase"
- - components/landing/DemoAnimation.tsx — looping Framer Motion showcase in a mock video player frame (cycles through mini-animations)
- - components/landing/FeaturesGrid.tsx — 3 cards: "Text to Animation", "URL → Video", "Export Anywhere"
- - components/landing/Navbar.tsx — logo + sign in + GitHub
- - components/landing/Footer.tsx — minimal footer
+The main orchestrator:
 
- Navigation flow: "Generate →" creates a nanoid() project ID, stores prompt in Zustand, navigates to /studio/[projectId]
+```ts
+export function useExportMP4() {
+  async function exportMP4(config: ExportConfig) {
+    const { width, height, fps, quality } = config
+    const animationConfig = useProjectStore.getState().animationConfig
 
- Exit criteria: Landing page renders at /, looks premium, prompt input works, navigates to studio on submit
+    // 1. Calculate total frames
+    const totalDuration = animationConfig.totalDuration // in ms
+    const totalFrames = Math.ceil((totalDuration / 1000) * fps)
 
- ---
- Phase 5: Skills System & Expanded Templates
+    // 2. Create mediabunny output
+    const { Output, Mp4OutputFormat, BufferTarget, CanvasSource, QUALITY_HIGH, QUALITY_MEDIUM, QUALITY_LOW } = await import('mediabunny')
 
- Spec file: _specs/05-skills-and-templates.md
+    const output = new Output({
+      format: new Mp4OutputFormat(),
+      target: new BufferTarget(),
+    })
 
- What: Build the Skills library (SKILL.md files) and expand scene templates to 15.
+    const canvas = new OffscreenCanvas(width, height)
+    const videoSource = new CanvasSource(canvas, {
+      codec: 'avc',
+      bitrate: getQualityBitrate(quality),
+    })
+    output.addVideoTrack(videoSource)
 
- SKILL.md files to create (P0):
- - skills/scene-builder/SKILL.md — multi-scene structure, pacing, duration guidelines, scene ordering
- - skills/motion-style/SKILL.md — easing curves, spring configs, duration ranges, stagger patterns
- - skills/typography/SKILL.md — text animation patterns, font pairing, letter-spacing
- - skills/color-palette/SKILL.md — dark mode palettes, gradient combos, accent color usage
- - skills/transitions/SKILL.md — scene-to-scene transitions: fade, slide, morph, wipe
- - skills/visual-analysis/SKILL.md — how to analyze uploaded screenshots, VisualContext extraction
+    await output.start()
 
- Additional scene templates (10 more, total 15):
- - lib/scene-templates/SplitScreenScene.tsx — left text, right visual
- - lib/scene-templates/StatsScene.tsx — animated number counters
- - lib/scene-templates/TestimonialScene.tsx — quote with attribution
- - lib/scene-templates/TimelineScene.tsx — vertical timeline with milestones
- - lib/scene-templates/ScreenshotShowcaseScene.tsx — animate a product screenshot
- - lib/scene-templates/ComparisonScene.tsx — before/after or side-by-side
- - lib/scene-templates/CodeBlockScene.tsx — animated code typing
- - lib/scene-templates/GradientBackgroundScene.tsx — mesh gradient / aurora backgrounds
- - lib/scene-templates/LogoGridScene.tsx — grid of logos animating in
- - lib/scene-templates/PricingTableScene.tsx — animated pricing cards
+    // 3. Frame-by-frame render loop
+    for (let frame = 0; frame < totalFrames; frame++) {
+      const timeMs = (frame / fps) * 1000
 
- Update lib/scene-registry.ts to include all 15 templates.
- Update system prompt in lib/claude.ts to document all template data schemas.
+      // a. Set the ExportRenderer's time
+      setCurrentExportTime(timeMs)
 
- Exit criteria: All 6 skills loaded into system prompt, all 15 templates work, Claude generates diverse high-quality animations
+      // b. Wait for React to render (requestAnimationFrame)
+      await new Promise(r => requestAnimationFrame(r))
 
- ---
- Spec-First Workflow
+      // c. Rasterize the DOM container to a canvas via html-to-image
+      const frameCanvas = await toCanvas(exportContainerRef.current, {
+        width, height,
+        pixelRatio: 1,
+        backgroundColor: '#0d1117',
+      })
 
- Each phase gets a detailed spec file in _specs/. Implementation order:
+      // d. Draw onto the OffscreenCanvas
+      const ctx = canvas.getContext('2d')!
+      ctx.drawImage(frameCanvas, 0, 0, width, height)
 
- _specs/
- ├── 01-foundation.md          ← implement first
- ├── 02-studio-layout.md       ← implement second
- ├── 03-animation-engine.md    ← implement third (critical path)
- ├── 04-landing-page.md        ← implement fourth
- └── 05-skills-and-templates.md ← implement fifth
+      // e. Feed to mediabunny encoder
+      await videoSource.add(frame / fps, 1 / fps)
 
- Process for each spec:
- 1. Write the spec with exact file paths, interfaces, component APIs, and implementation details
- 2. Implement all files described in the spec
- 3. Verify exit criteria
- 4. Move to next spec
+      // f. Update progress
+      setExportProgress({
+        phase: 'rendering',
+        currentFrame: frame + 1,
+        totalFrames,
+        percent: Math.round(((frame + 1) / totalFrames) * 100),
+      })
+    }
 
- ---
- Key Technical Decisions
+    // 4. Finalize
+    await output.finalize()
 
- ┌─────────────────────┬─────────────────────────────────────┬────────────────────────────────────────────────────────────────────┐
- │      Decision       │               Choice                │                             Rationale                              │
- ├─────────────────────┼─────────────────────────────────────┼────────────────────────────────────────────────────────────────────┤
- │ Animation rendering │ Pre-built parametric templates      │ Reliable, guaranteed quality, no in-browser TSX compilation needed │
- ├─────────────────────┼─────────────────────────────────────┼────────────────────────────────────────────────────────────────────┤
- │ State management    │ Zustand                             │ Lightweight, no boilerplate                                        │
- ├─────────────────────┼─────────────────────────────────────┼────────────────────────────────────────────────────────────────────┤
- │ Claude output       │ Structured JSON scene configs       │ Parseable, maps to templates predictably                           │
- ├─────────────────────┼─────────────────────────────────────┼────────────────────────────────────────────────────────────────────┤
- │ Streaming           │ Native ReadableStream + SSE         │ Simple, works with Vercel                                          │
- ├─────────────────────┼─────────────────────────────────────┼────────────────────────────────────────────────────────────────────┤
- │ Storage (MVP)       │ In-memory / Zustand                 │ Ship fast, add persistence later                                   │
- ├─────────────────────┼─────────────────────────────────────┼────────────────────────────────────────────────────────────────────┤
- │ Playback            │ requestAnimationFrame + React state │ Smooth 60fps, no external deps                                     │
- ├─────────────────────┼─────────────────────────────────────┼────────────────────────────────────────────────────────────────────┤
- │ Panel resizing      │ CSS Grid + mouse drag               │ No library needed                                                  │
- ├─────────────────────┼─────────────────────────────────────┼────────────────────────────────────────────────────────────────────┤
- │ Code viewer         │ Simple syntax highlighting          │ Avoid Monaco bundle size for MVP                                   │
- └─────────────────────┴─────────────────────────────────────┴────────────────────────────────────────────────────────────────────┘
+    // 5. Download
+    downloadMP4(output.target.buffer, `${animationConfig.title}.mp4`)
+  }
 
- ---
- File Count Summary
+  return { exportMP4, cancelExport }
+}
+```
 
- ┌─────────┬───────┬───────────────────────────────────────────────────┐
- │  Phase  │ Files │                    Description                    │
- ├─────────┼───────┼───────────────────────────────────────────────────┤
- │ Specs   │ 5     │ _specs/01-05.md                                   │
- ├─────────┼───────┼───────────────────────────────────────────────────┤
- │ Phase 1 │ ~15   │ Config, types, store, UI primitives               │
- ├─────────┼───────┼───────────────────────────────────────────────────┤
- │ Phase 2 │ ~13   │ Studio layout, panels, controls                   │
- ├─────────┼───────┼───────────────────────────────────────────────────┤
- │ Phase 3 │ ~14   │ API route, Claude integration, 5 templates, hooks │
- ├─────────┼───────┼───────────────────────────────────────────────────┤
- │ Phase 4 │ ~9    │ Landing page components                           │
- ├─────────┼───────┼───────────────────────────────────────────────────┤
- │ Phase 5 │ ~17   │ 6 SKILL.md files, 10 templates, registry update   │
- ├─────────┼───────┼───────────────────────────────────────────────────┤
- │ Total   │ ~73   │                                                   │
- └─────────┴───────┴───────────────────────────────────────────────────┘
+### Step 7: Build `components/studio/ExportModal.tsx`
 
- ---
- Verification Plan
+A polished modal with:
+- **Header**: "Export Animation" title
+- **Preview thumbnail**: Small preview of current animation frame
+- **Resolution display**: Shows selected preset (e.g., "1920 × 1080 — Full size") — read-only, driven by the canvas preset selected in PreviewPanel
+- **Quality selector**: 3 options (Low / Medium / High) with descriptions
+  - Low: "Smaller file, faster export (~2 Mbps)"
+  - Medium: "Balanced quality (~5 Mbps)"
+  - High: "Best quality, larger file (~10 Mbps)"
+- **FPS selector**: 24 / 30 / 60
+- **Estimated file size** (rough calculation from bitrate × duration)
+- **Export button**: "Export MP4" with download icon
+- **Progress bar**: Shows during export with frame count, percentage, estimated time remaining
+- **Cancel button**: During export
+- **Close/done state**: Shows download link when complete
 
- After each phase, verify:
+### Step 8: Wire TopBar Export button
 
- 1. Phase 1: npm run dev boots, dark page at localhost:3000, no TypeScript errors
- 2. Phase 2: Navigate to /studio/new, 3-panel layout renders, panels resize, chat input sends messages to state
- 3. Phase 3: Type a prompt → Claude responds with animation config → scenes appear in preview → play/pause works → file tree shows scene files
- 4. Phase 4: Landing page at / looks polished, prompt navigates to studio
- 5. Phase 5: Generate diverse prompts ("product launch", "logo animation", "pricing comparison") → each produces distinct, high-quality multi-scene animations
+Update `TopBar.tsx`:
+- Import `openExportModal` from store
+- Wire the Export button's `onClick` to `openExportModal()`
+- Disable when no `animationConfig` exists
 
- End-to-end test: Open / → type "Create a 20-second dark product launch video for a deployment platform" → click Generate → studio opens → animation plays with 3-5 scenes → iterate with "make the intro
- faster" → animation updates
+---
+
+## Export Flow (User Experience)
+
+1. User generates an animation in the Studio
+2. User selects canvas size from PreviewPanel dropdown (e.g., "Full size" 1920×1080, or "iPhone 17 Pro" 402×874)
+3. User clicks **Export** in TopBar
+4. ExportModal opens showing:
+   - Resolution: 1920 × 1080 (from selected preset)
+   - Quality: Medium (default)
+   - FPS: 30 (default)
+   - Est. file size: ~12 MB
+5. User clicks **Export MP4**
+6. Progress bar shows: "Rendering frame 124/600 (21%)"
+7. On completion: browser downloads `Product Launch Video.mp4`
+8. Modal shows success state with "Done!" checkmark
+
+---
+
+## Technical Considerations
+
+### OffscreenCanvas & html-to-image
+- `html-to-image` uses `foreignObject` SVG serialization to rasterize DOM elements
+- The hidden export container must be in the actual DOM (not `display: none`) — we position it offscreen with `position: fixed; left: -99999px`
+- Each frame render involves: React state update → DOM paint → html-to-image rasterization → canvas draw → mediabunny encode
+- We await `requestAnimationFrame` between frames to let React flush
+
+### Performance
+- Export will be slower than real-time (expected: ~2-5× slower depending on scene complexity and resolution)
+- Progress UI keeps the user informed
+- We dynamically import mediabunny to keep it out of the main bundle
+
+### Browser Compatibility
+- mediabunny uses WebCodecs API — supported in Chrome 94+, Edge 94+, Safari 16.4+, Firefox 130+
+- If WebCodecs is unavailable, show a "Browser not supported" message in the modal
+
+### Memory
+- We process one frame at a time and don't accumulate frame buffers
+- mediabunny handles its own internal buffering efficiently
+- The OffscreenCanvas is reused across all frames
+
+---
+
+## File Count
+
+| Type | Count |
+|------|-------|
+| New files | 4 |
+| Modified files | 4 |
+| New dependency | 1 (`html-to-image`) |
+| **Total changes** | **8 files** |

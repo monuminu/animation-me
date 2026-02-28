@@ -7,6 +7,7 @@ import { PreviewPanel } from './PreviewPanel'
 import { FileTreePanel } from './FileTreePanel'
 import { BottomBar } from './BottomBar'
 import { PreviewModal } from './PreviewModal'
+import { ExportModal } from './ExportModal'
 import { useResizePanel } from '@/hooks/useResizePanel'
 
 export function StudioLayout() {
@@ -76,6 +77,9 @@ export function StudioLayout() {
 
       {/* Full-screen preview modal */}
       <PreviewModal />
+
+      {/* Export modal */}
+      <ExportModal />
     </div>
   )
 }

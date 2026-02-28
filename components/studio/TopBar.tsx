@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip'
 
 export function TopBar() {
-  const { projectTitle, animationConfig, isFileTreeOpen, toggleFileTree, openPreview } = useProjectStore()
+  const { projectTitle, animationConfig, isFileTreeOpen, toggleFileTree, openPreview, openExportModal } = useProjectStore()
 
   const hasAnimation = !!animationConfig
 
@@ -47,7 +47,7 @@ export function TopBar() {
           <Play className="w-3.5 h-3.5" />
           Preview
         </Button>
-        <Button variant="secondary" size="sm">
+        <Button variant="secondary" size="sm" disabled={!hasAnimation} onClick={openExportModal}>
           <Download className="w-3.5 h-3.5" />
           Export
         </Button>

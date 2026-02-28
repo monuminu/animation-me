@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { AnimationConfig, ChatMessage, PlaybackState, FileTreeNode, CanvasPreset, RecordingState } from '@/types'
+import type { AnimationConfig, ChatMessage, PlaybackState, FileTreeNode, CanvasPreset, RecordingState, ExportProgress } from '@/types'
 
 interface ProjectStore {
   // Project
@@ -30,6 +30,9 @@ interface ProjectStore {
   isFileTreeOpen: boolean
   canvasPresetId: string
   isPreviewOpen: boolean
+  isExportModalOpen: boolean
+  isExporting: boolean
+  exportProgress: ExportProgress | null
 
   // Actions
   setProjectId: (id: string) => void
@@ -51,6 +54,10 @@ interface ProjectStore {
   setRecording: (updates: Partial<RecordingState>) => void
   openPreview: () => void
   closePreview: () => void
+  openExportModal: () => void
+  closeExportModal: () => void
+  setIsExporting: (exporting: boolean) => void
+  setExportProgress: (progress: ExportProgress | null) => void
   reset: () => void
 }
 
@@ -84,6 +91,9 @@ export const useProjectStore = create<ProjectStore>((set) => ({
   isFileTreeOpen: true,
   canvasPresetId: 'full-size',
   isPreviewOpen: false,
+  isExportModalOpen: false,
+  isExporting: false,
+  exportProgress: null,
 
   setProjectId: (id) => set({ projectId: id }),
   setProjectTitle: (title) => set({ projectTitle: title }),
@@ -155,6 +165,11 @@ export const useProjectStore = create<ProjectStore>((set) => ({
         isPlaying: false,
       },
     })),
+
+  openExportModal: () => set({ isExportModalOpen: true }),
+  closeExportModal: () => set({ isExportModalOpen: false, exportProgress: null }),
+  setIsExporting: (exporting) => set({ isExporting: exporting }),
+  setExportProgress: (progress) => set({ exportProgress: progress }),
 
   reset: () =>
     set({

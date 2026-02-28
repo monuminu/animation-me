@@ -114,6 +114,7 @@ export function PreviewPanel() {
       {/* Canvas Area */}
       <div className="flex-1 flex items-center justify-center p-6 min-h-0">
         <div
+          id="export-capture-target"
           className={cn(
             'relative rounded-lg overflow-hidden bg-[#0d1117] border border-border/50 shadow-2xl',
             isPortrait ? 'h-full' : isSquare ? 'h-full' : 'w-full'

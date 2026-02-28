@@ -151,3 +151,19 @@ export interface RecordingState {
   hasStarted: boolean
   hasEnded: boolean
 }
+
+export interface ExportConfig {
+  width: number
+  height: number
+  fps: 24 | 30 | 60
+  quality: 'low' | 'medium' | 'high'
+  format: 'mp4'
+}
+
+export interface ExportProgress {
+  phase: 'preparing' | 'rendering' | 'encoding' | 'finalizing' | 'done' | 'error'
+  currentFrame: number
+  totalFrames: number
+  percent: number
+  error?: string
+}
