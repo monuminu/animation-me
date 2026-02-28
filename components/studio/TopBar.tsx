@@ -1,14 +1,22 @@
 'use client'
 
 import { Sparkles, Download, Play, PanelRightOpen, PanelRightClose } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { useProjectStore } from '@/stores/project-store'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip'
 
 export function TopBar() {
-  const { projectTitle, animationConfig, isFileTreeOpen, toggleFileTree, openPreview, openExportModal } = useProjectStore()
+  const { projectId, projectTitle, animationConfig, isFileTreeOpen, toggleFileTree, openExportModal } = useProjectStore()
+  const router = useRouter()
 
   const hasAnimation = !!animationConfig
+
+  const handlePreview = () => {
+    if (projectId) {
+      router.push(`/studio/${projectId}/preview`)
+    }
+  }
 
   return (
     <div className="h-12 flex items-center justify-between px-4 border-b border-border bg-bg-secondary/50 backdrop-blur-sm flex-shrink-0">
@@ -42,7 +50,7 @@ export function TopBar() {
           variant="ghost"
           size="sm"
           disabled={!hasAnimation}
-          onClick={openPreview}
+          onClick={handlePreview}
         >
           <Play className="w-3.5 h-3.5" />
           Preview
