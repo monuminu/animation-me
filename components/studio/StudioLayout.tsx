@@ -6,6 +6,7 @@ import { ChatPanel } from './ChatPanel'
 import { PreviewPanel } from './PreviewPanel'
 import { FileTreePanel } from './FileTreePanel'
 import { BottomBar } from './BottomBar'
+import { PreviewModal } from './PreviewModal'
 import { useResizePanel } from '@/hooks/useResizePanel'
 
 export function StudioLayout() {
@@ -72,6 +73,9 @@ export function StudioLayout() {
       </div>
 
       <BottomBar />
+
+      {/* Full-screen preview modal */}
+      <PreviewModal />
     </div>
   )
 }

@@ -139,7 +139,6 @@ The studio is a 3-panel layout with a professional, dark-themed design:
 |----------|-------------|---------------|
 | `TextRevealScene` | Word-by-word, typewriter, or fade-up text | `headline`, `subtitle`, `style` |
 | `HeroScene` | Headline + subheadline + CTA with cinematic entrance | `headline`, `subheadline`, `cta` |
-| `FeatureGridScene` | Staggered grid of feature cards | `features[]` with `title`, `description`, `icon` |
 | `CTAScene` | Gradient text call-to-action with pulsing button | `headline`, `buttonText`, gradient colors |
 | `LogoRevealScene` | Logo scale-in with brand name type-out | `brandName`, `tagline`, `logoUrl` |
 | `SplitScreenScene` | Left text / right visual split layout | `headline`, `description`, `imageUrl` |

@@ -116,3 +116,11 @@ export interface FileTreeNode {
   content?: string
   language?: string
 }
+
+export interface CanvasPreset {
+  id: string
+  label: string
+  width: number
+  height: number
+  category: 'standard' | 'iphone' | 'pixel' | 'samsung'
+}

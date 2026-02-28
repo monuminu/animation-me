@@ -69,7 +69,7 @@ export function HeroScene({ isActive, progress, onComplete, data }: SceneProps) 
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '2rem 4rem',
+        padding: 'clamp(1.5rem, 3vw, 2rem) clamp(1.5rem, 4vw, 4rem)',
         overflow: 'hidden',
         fontFamily:
           "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",

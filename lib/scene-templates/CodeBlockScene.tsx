@@ -169,7 +169,7 @@ export function CodeBlockScene({ isActive, progress, onComplete, data }: ScenePr
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '2.5rem 3rem',
+        padding: 'clamp(1.5rem, 3vw, 2.5rem) clamp(1rem, 3vw, 3rem)',
         overflow: 'hidden',
         fontFamily:
           "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",

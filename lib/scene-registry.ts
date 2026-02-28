@@ -3,7 +3,6 @@
 import type { SceneProps } from '@/types'
 import { TextRevealScene } from './scene-templates/TextRevealScene'
 import { HeroScene } from './scene-templates/HeroScene'
-import { FeatureGridScene } from './scene-templates/FeatureGridScene'
 import { CTAScene } from './scene-templates/CTAScene'
 import { LogoRevealScene } from './scene-templates/LogoRevealScene'
 import { SplitScreenScene } from './scene-templates/SplitScreenScene'
@@ -16,13 +15,13 @@ import { CodeBlockScene } from './scene-templates/CodeBlockScene'
 import { GradientBackgroundScene } from './scene-templates/GradientBackgroundScene'
 import { LogoGridScene } from './scene-templates/LogoGridScene'
 import { PricingTableScene } from './scene-templates/PricingTableScene'
+import { FeatureGridScene } from './scene-templates/FeatureGridScene'
 
 type SceneComponent = React.ComponentType<SceneProps>
 
 const registry: Record<string, SceneComponent> = {
   TextRevealScene,
   HeroScene,
-  FeatureGridScene,
   CTAScene,
   LogoRevealScene,
   SplitScreenScene,
@@ -35,6 +34,7 @@ const registry: Record<string, SceneComponent> = {
   GradientBackgroundScene,
   LogoGridScene,
   PricingTableScene,
+  FeatureGridScene,
 }
 
 export function getSceneComponent(templateName: string): SceneComponent | undefined {

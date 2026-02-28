@@ -65,14 +65,14 @@ function ComparisonCard({
         flex: 1,
         background: cardBg,
         borderRadius: '16px',
-        padding: '2rem',
+        padding: 'clamp(1.25rem, 2.5vw, 2rem)',
         border: `1px solid ${isBefore ? '#f8514920' : `${accent}20`}`,
         opacity: eased,
         transform: `translateX(${(1 - eased) * (isBefore ? -50 : 50)}px)`,
         display: 'flex',
         flexDirection: 'column',
         gap: '1.25rem',
-        minWidth: '280px',
+        minWidth: '200px',
       }}
     >
       {/* Label */}
@@ -197,7 +197,7 @@ export function ComparisonScene({ isActive, progress, onComplete, data }: SceneP
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '3rem 3rem',
+        padding: 'clamp(1.5rem, 3vw, 3rem) clamp(1.5rem, 3vw, 3rem)',
         overflow: 'hidden',
         fontFamily:
           "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
@@ -248,7 +248,8 @@ export function ComparisonScene({ isActive, progress, onComplete, data }: SceneP
           zIndex: 1,
           display: 'flex',
           alignItems: 'stretch',
-          gap: '2rem',
+          flexWrap: 'wrap',
+          gap: 'clamp(1rem, 2vw, 2rem)',
           maxWidth: '850px',
           width: '100%',
         }}

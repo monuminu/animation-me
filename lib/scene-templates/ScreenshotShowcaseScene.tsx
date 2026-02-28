@@ -48,7 +48,7 @@ function BrowserFrame({
     <div
       style={{
         width: '100%',
-        maxWidth: '700px',
+        maxWidth: 'min(700px, 100%)',
         borderRadius: '12px',
         overflow: 'hidden',
         background: '#1a1f2e',
@@ -142,7 +142,7 @@ function PhoneFrame({
   return (
     <div
       style={{
-        width: '280px',
+        width: 'min(280px, 100%)',
         borderRadius: '36px',
         overflow: 'hidden',
         background: '#1a1f2e',
@@ -260,7 +260,7 @@ export function ScreenshotShowcaseScene({ isActive, progress, onComplete, data }
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '2.5rem 3rem',
+        padding: 'clamp(1.5rem, 3vw, 2.5rem) clamp(1.5rem, 3vw, 3rem)',
         overflow: 'hidden',
         fontFamily:
           "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
@@ -346,7 +346,7 @@ export function ScreenshotShowcaseScene({ isActive, progress, onComplete, data }
         ) : mockupType === 'clean' ? (
           <div
             style={{
-              maxWidth: '700px',
+              maxWidth: 'min(700px, 100%)',
               borderRadius: '16px',
               overflow: 'hidden',
               boxShadow: `0 25px 80px rgba(0,0,0,0.5), 0 0 40px ${accent}08`,
@@ -364,7 +364,7 @@ export function ScreenshotShowcaseScene({ isActive, progress, onComplete, data }
             ) : (
               <div
                 style={{
-                  width: '700px',
+                  width: '100%',
                   aspectRatio: '16 / 10',
                   background: `linear-gradient(135deg, ${accent}15, ${accent}05)`,
                   display: 'flex',

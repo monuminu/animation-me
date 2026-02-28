@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { AnimationConfig, ChatMessage, PlaybackState, FileTreeNode } from '@/types'
+import type { AnimationConfig, ChatMessage, PlaybackState, FileTreeNode, CanvasPreset } from '@/types'
 
 interface ProjectStore {
   // Project
@@ -25,6 +25,8 @@ interface ProjectStore {
   chatPanelWidth: number
   fileTreePanelWidth: number
   isFileTreeOpen: boolean
+  canvasPresetId: string
+  isPreviewOpen: boolean
 
   // Actions
   setProjectId: (id: string) => void
@@ -42,6 +44,9 @@ interface ProjectStore {
   setFileTreePanelWidth: (width: number) => void
   toggleFileTree: () => void
   setFileTreeOpen: (open: boolean) => void
+  setCanvasPresetId: (id: string) => void
+  openPreview: () => void
+  closePreview: () => void
   reset: () => void
 }
 
@@ -66,6 +71,8 @@ export const useProjectStore = create<ProjectStore>((set) => ({
   chatPanelWidth: 320,
   fileTreePanelWidth: 280,
   isFileTreeOpen: true,
+  canvasPresetId: 'full-size',
+  isPreviewOpen: false,
 
   setProjectId: (id) => set({ projectId: id }),
   setProjectTitle: (title) => set({ projectTitle: title }),
@@ -110,6 +117,27 @@ export const useProjectStore = create<ProjectStore>((set) => ({
   setFileTreePanelWidth: (width) => set({ fileTreePanelWidth: width }),
   toggleFileTree: () => set((state) => ({ isFileTreeOpen: !state.isFileTreeOpen })),
   setFileTreeOpen: (open) => set({ isFileTreeOpen: open }),
+  setCanvasPresetId: (id) => set({ canvasPresetId: id }),
+
+  openPreview: () =>
+    set((state) => ({
+      isPreviewOpen: true,
+      playback: {
+        ...state.playback,
+        currentTime: 0,
+        currentSceneIndex: 0,
+        isPlaying: true,
+      },
+    })),
+
+  closePreview: () =>
+    set((state) => ({
+      isPreviewOpen: false,
+      playback: {
+        ...state.playback,
+        isPlaying: false,
+      },
+    })),
 
   reset: () =>
     set({

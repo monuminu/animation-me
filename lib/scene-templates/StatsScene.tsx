@@ -67,8 +67,8 @@ function StatCard({
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        gap: '0.5rem',
-        padding: '2rem 1.5rem',
+        gap: '0.35rem',
+        padding: 'clamp(1rem, 2vw, 2rem) clamp(1rem, 1.5vw, 1.5rem)',
         opacity: eased,
         transform: `translateY(${(1 - eased) * 40}px) scale(${0.9 + eased * 0.1})`,
       }}
@@ -76,7 +76,7 @@ function StatCard({
       {/* Number */}
       <div
         style={{
-          fontSize: 'clamp(2.5rem, 5vw, 4.5rem)',
+          fontSize: 'clamp(1.5rem, 3.5vw, 3rem)',
           fontWeight: 800,
           color: textColor,
           letterSpacing: '-0.04em',
@@ -107,11 +107,11 @@ function StatCard({
       {/* Label */}
       <p
         style={{
-          fontSize: 'clamp(0.85rem, 1.2vw, 1.1rem)',
+          fontSize: 'clamp(0.7rem, 1.1vw, 1rem)',
           fontWeight: 500,
           color: `${textColor}70`,
           margin: 0,
-          marginTop: '0.75rem',
+          marginTop: '0.5rem',
           textTransform: 'uppercase',
           letterSpacing: '0.08em',
           textAlign: 'center',
@@ -154,7 +154,7 @@ export function StatsScene({ isActive, progress, onComplete, data }: SceneProps)
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '3rem 4rem',
+        padding: 'clamp(1.5rem, 3vw, 3rem) clamp(1.5rem, 4vw, 4rem)',
         overflow: 'hidden',
         fontFamily:
           "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
@@ -190,7 +190,7 @@ export function StatsScene({ isActive, progress, onComplete, data }: SceneProps)
             letterSpacing: '-0.02em',
             lineHeight: 1.2,
             margin: 0,
-            marginBottom: '3rem',
+            marginBottom: 'clamp(1.5rem, 3vw, 3rem)',
             opacity: titleProgress,
             transform: `translateY(${(1 - titleProgress) * 30}px)`,
           }}
@@ -208,7 +208,7 @@ export function StatsScene({ isActive, progress, onComplete, data }: SceneProps)
           flexWrap: 'wrap',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: '3rem',
+          gap: 'clamp(1.5rem, 3vw, 3rem)',
           maxWidth: '1000px',
           width: '100%',
         }}

@@ -63,10 +63,11 @@ export function SplitScreenScene({ isActive, progress, onComplete, data }: Scene
     <div
       style={{
         flex: 1,
+        minWidth: '280px',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'center',
-        padding: '3rem',
+        padding: 'clamp(1.5rem, 3vw, 3rem)',
         opacity: textSideProgress,
         transform: `translateX(${(1 - textSideProgress) * (isLeftText ? -80 : 80)}px)`,
       }}
@@ -119,10 +120,11 @@ export function SplitScreenScene({ isActive, progress, onComplete, data }: Scene
     <div
       style={{
         flex: 1,
+        minWidth: '280px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '3rem',
+        padding: 'clamp(1.5rem, 3vw, 3rem)',
         opacity: visualSideProgress,
         transform: `translateX(${(1 - visualSideProgress) * (isLeftText ? 80 : -80)}px)`,
       }}
@@ -218,6 +220,7 @@ export function SplitScreenScene({ isActive, progress, onComplete, data }: Scene
         backgroundColor: bg,
         display: 'flex',
         flexDirection: 'row',
+        flexWrap: 'wrap',
         alignItems: 'stretch',
         overflow: 'hidden',
         fontFamily:

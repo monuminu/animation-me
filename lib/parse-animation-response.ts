@@ -57,7 +57,7 @@ function validateConfig(raw: Record<string, unknown>): AnimationConfig {
   const scenes = (raw.scenes as Array<Record<string, unknown>>).map((scene, index) => ({
     id: (scene.id as string) || `scene-${index}`,
     template: (scene.template as string) || 'TextRevealScene',
-    duration: (scene.duration as number) || 4000,
+    duration: (scene.duration as number) || 6000,
     data: (scene.data as Record<string, unknown>) || {},
     transition: scene.transition as { type: 'fade' | 'slide' | 'wipe' | 'morph' | 'none'; duration?: number } | undefined,
   }))

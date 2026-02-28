@@ -47,7 +47,7 @@ function WordByWordReveal({
         flexWrap: 'wrap',
         justifyContent: 'center',
         gap: '0.4em',
-        fontSize: isSubtitle ? '1.5rem' : '3.5rem',
+        fontSize: isSubtitle ? 'clamp(1rem, 2.5vw, 1.5rem)' : 'clamp(1.8rem, 5vw, 3.5rem)',
         fontWeight: isSubtitle ? 400 : 700,
         lineHeight: 1.3,
         letterSpacing: '-0.02em',
@@ -97,7 +97,7 @@ function TypewriterReveal({
   return (
     <div
       style={{
-        fontSize: isSubtitle ? '1.5rem' : '3.5rem',
+        fontSize: isSubtitle ? 'clamp(1rem, 2.5vw, 1.5rem)' : 'clamp(1.8rem, 5vw, 3.5rem)',
         fontWeight: isSubtitle ? 400 : 700,
         fontFamily: "'SF Mono', 'Fira Code', 'Consolas', monospace",
         color: textColor,
@@ -156,7 +156,7 @@ function FadeUpReveal({
           <div
             key={i}
             style={{
-              fontSize: isSubtitle ? '1.5rem' : '3.5rem',
+              fontSize: isSubtitle ? 'clamp(1rem, 2.5vw, 1.5rem)' : 'clamp(1.8rem, 5vw, 3.5rem)',
               fontWeight: isSubtitle ? 400 : 700,
               color: textColor,
               letterSpacing: '-0.02em',
@@ -243,7 +243,7 @@ export function TextRevealScene({ isActive, progress, onComplete, data }: SceneP
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '2rem 4rem',
+        padding: 'clamp(1rem, 3vw, 2rem) clamp(1.5rem, 4vw, 4rem)',
         overflow: 'hidden',
         fontFamily:
           "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",

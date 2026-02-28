@@ -63,7 +63,7 @@ function FeatureCard({
       style={{
         background: cardBg,
         borderRadius: '16px',
-        padding: '2rem',
+        padding: 'clamp(1.25rem, 2.5vw, 2rem)',
         border: `1px solid ${accent}18`,
         opacity: eased,
         transform: `translateY(${(1 - eased) * 40}px) scale(${0.92 + eased * 0.08})`,
@@ -172,7 +172,7 @@ export function FeatureGridScene({ isActive, progress, onComplete, data }: Scene
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '3rem 4rem',
+        padding: 'clamp(1.5rem, 3vw, 3rem) clamp(1.5rem, 4vw, 4rem)',
         overflow: 'hidden',
         fontFamily:
           "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
@@ -219,9 +219,9 @@ export function FeatureGridScene({ isActive, progress, onComplete, data }: Scene
           position: 'relative',
           zIndex: 1,
           display: 'grid',
-          gridTemplateColumns: `repeat(${columns}, 1fr)`,
+          gridTemplateColumns: `repeat(auto-fit, minmax(min(250px, 100%), 1fr))`,
           gap: '1.25rem',
-          maxWidth: columns === 3 ? '900px' : '650px',
+          maxWidth: '900px',
           width: '100%',
         }}
       >

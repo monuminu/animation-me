@@ -6,7 +6,9 @@ import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip'
 
 export function TopBar() {
-  const { projectTitle, animationConfig, isFileTreeOpen, toggleFileTree } = useProjectStore()
+  const { projectTitle, animationConfig, isFileTreeOpen, toggleFileTree, openPreview } = useProjectStore()
+
+  const hasAnimation = !!animationConfig
 
   return (
     <div className="h-12 flex items-center justify-between px-4 border-b border-border bg-bg-secondary/50 backdrop-blur-sm flex-shrink-0">
@@ -36,7 +38,12 @@ export function TopBar() {
 
       {/* Right: Actions */}
       <div className="flex items-center gap-2">
-        <Button variant="ghost" size="sm">
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled={!hasAnimation}
+          onClick={openPreview}
+        >
           <Play className="w-3.5 h-3.5" />
           Preview
         </Button>
