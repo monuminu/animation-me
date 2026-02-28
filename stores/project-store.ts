@@ -1,0 +1,120 @@
+import { create } from 'zustand'
+import type { AnimationConfig, ChatMessage, PlaybackState, FileTreeNode } from '@/types'
+
+interface ProjectStore {
+  // Project
+  projectId: string | null
+  projectTitle: string
+  initialPrompt: string
+
+  // Chat
+  messages: ChatMessage[]
+  isGenerating: boolean
+
+  // Animation
+  animationConfig: AnimationConfig | null
+
+  // Playback
+  playback: PlaybackState
+
+  // File tree
+  fileTree: FileTreeNode[]
+  selectedFile: string | null
+
+  // UI
+  chatPanelWidth: number
+  fileTreePanelWidth: number
+
+  // Actions
+  setProjectId: (id: string) => void
+  setProjectTitle: (title: string) => void
+  setInitialPrompt: (prompt: string) => void
+  addMessage: (message: ChatMessage) => void
+  updateMessage: (id: string, updates: Partial<ChatMessage>) => void
+  setIsGenerating: (generating: boolean) => void
+  setAnimationConfig: (config: AnimationConfig | null) => void
+  setPlayback: (updates: Partial<PlaybackState>) => void
+  togglePlayback: () => void
+  setFileTree: (tree: FileTreeNode[]) => void
+  setSelectedFile: (path: string | null) => void
+  setChatPanelWidth: (width: number) => void
+  setFileTreePanelWidth: (width: number) => void
+  reset: () => void
+}
+
+const initialPlayback: PlaybackState = {
+  isPlaying: false,
+  currentTime: 0,
+  totalDuration: 0,
+  currentSceneIndex: 0,
+  speed: 1,
+}
+
+export const useProjectStore = create<ProjectStore>((set) => ({
+  projectId: null,
+  projectTitle: 'Untitled Project',
+  initialPrompt: '',
+  messages: [],
+  isGenerating: false,
+  animationConfig: null,
+  playback: initialPlayback,
+  fileTree: [],
+  selectedFile: null,
+  chatPanelWidth: 320,
+  fileTreePanelWidth: 280,
+
+  setProjectId: (id) => set({ projectId: id }),
+  setProjectTitle: (title) => set({ projectTitle: title }),
+  setInitialPrompt: (prompt) => set({ initialPrompt: prompt }),
+
+  addMessage: (message) =>
+    set((state) => ({ messages: [...state.messages, message] })),
+
+  updateMessage: (id, updates) =>
+    set((state) => ({
+      messages: state.messages.map((m) =>
+        m.id === id ? { ...m, ...updates } : m
+      ),
+    })),
+
+  setIsGenerating: (generating) => set({ isGenerating: generating }),
+
+  setAnimationConfig: (config) =>
+    set({
+      animationConfig: config,
+      playback: config
+        ? { ...initialPlayback, totalDuration: config.totalDuration }
+        : initialPlayback,
+    }),
+
+  setPlayback: (updates) =>
+    set((state) => ({
+      playback: { ...state.playback, ...updates },
+    })),
+
+  togglePlayback: () =>
+    set((state) => ({
+      playback: {
+        ...state.playback,
+        isPlaying: !state.playback.isPlaying,
+      },
+    })),
+
+  setFileTree: (tree) => set({ fileTree: tree }),
+  setSelectedFile: (path) => set({ selectedFile: path }),
+  setChatPanelWidth: (width) => set({ chatPanelWidth: width }),
+  setFileTreePanelWidth: (width) => set({ fileTreePanelWidth: width }),
+
+  reset: () =>
+    set({
+      projectId: null,
+      projectTitle: 'Untitled Project',
+      initialPrompt: '',
+      messages: [],
+      isGenerating: false,
+      animationConfig: null,
+      playback: initialPlayback,
+      fileTree: [],
+      selectedFile: null,
+    }),
+}))
