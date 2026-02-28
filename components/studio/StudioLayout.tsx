@@ -9,7 +9,7 @@ import { BottomBar } from './BottomBar'
 import { useResizePanel } from '@/hooks/useResizePanel'
 
 export function StudioLayout() {
-  const { chatPanelWidth, fileTreePanelWidth, setChatPanelWidth, setFileTreePanelWidth } = useProjectStore()
+  const { chatPanelWidth, fileTreePanelWidth, isFileTreeOpen, setChatPanelWidth, setFileTreePanelWidth } = useProjectStore()
 
   const chatResize = useResizePanel({
     initialWidth: chatPanelWidth,
@@ -51,19 +51,24 @@ export function StudioLayout() {
           <PreviewPanel />
         </div>
 
-        {/* FileTree resize handle */}
-        <div
-          className="w-1 cursor-col-resize hover:bg-accent/40 active:bg-accent/60 transition-colors flex-shrink-0"
-          onMouseDown={fileTreeResize.onMouseDown}
-        />
+        {/* File Tree Panel - collapsible */}
+        {isFileTreeOpen && (
+          <>
+            {/* FileTree resize handle */}
+            <div
+              className="w-1 cursor-col-resize hover:bg-accent/40 active:bg-accent/60 transition-colors flex-shrink-0"
+              onMouseDown={fileTreeResize.onMouseDown}
+            />
 
-        {/* File Tree Panel */}
-        <div
-          className="flex-shrink-0 border-l border-border"
-          style={{ width: fileTreeResize.width }}
-        >
-          <FileTreePanel />
-        </div>
+            {/* File Tree Panel */}
+            <div
+              className="flex-shrink-0 border-l border-border animate-slide-in-right"
+              style={{ width: fileTreeResize.width }}
+            >
+              <FileTreePanel />
+            </div>
+          </>
+        )}
       </div>
 
       <BottomBar />

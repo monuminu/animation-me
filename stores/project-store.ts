@@ -24,6 +24,7 @@ interface ProjectStore {
   // UI
   chatPanelWidth: number
   fileTreePanelWidth: number
+  isFileTreeOpen: boolean
 
   // Actions
   setProjectId: (id: string) => void
@@ -39,6 +40,8 @@ interface ProjectStore {
   setSelectedFile: (path: string | null) => void
   setChatPanelWidth: (width: number) => void
   setFileTreePanelWidth: (width: number) => void
+  toggleFileTree: () => void
+  setFileTreeOpen: (open: boolean) => void
   reset: () => void
 }
 
@@ -62,6 +65,7 @@ export const useProjectStore = create<ProjectStore>((set) => ({
   selectedFile: null,
   chatPanelWidth: 320,
   fileTreePanelWidth: 280,
+  isFileTreeOpen: true,
 
   setProjectId: (id) => set({ projectId: id }),
   setProjectTitle: (title) => set({ projectTitle: title }),
@@ -104,6 +108,8 @@ export const useProjectStore = create<ProjectStore>((set) => ({
   setSelectedFile: (path) => set({ selectedFile: path }),
   setChatPanelWidth: (width) => set({ chatPanelWidth: width }),
   setFileTreePanelWidth: (width) => set({ fileTreePanelWidth: width }),
+  toggleFileTree: () => set((state) => ({ isFileTreeOpen: !state.isFileTreeOpen })),
+  setFileTreeOpen: (open) => set({ isFileTreeOpen: open }),
 
   reset: () =>
     set({
