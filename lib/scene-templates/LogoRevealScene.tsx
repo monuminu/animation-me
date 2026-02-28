@@ -187,9 +187,9 @@ export function LogoRevealScene({ isActive, progress, onComplete, data }: SceneP
           </span>
         ))}
 
-        {/* Typing cursor */}
+        {/* Typing cursor — progress-driven blink (deterministic for Remotion export) */}
         {showCursor && (
-          <motion.span
+          <span
             style={{
               display: 'inline-block',
               width: '3px',
@@ -197,9 +197,8 @@ export function LogoRevealScene({ isActive, progress, onComplete, data }: SceneP
               backgroundColor: accent,
               marginLeft: '3px',
               verticalAlign: 'text-bottom',
+              opacity: Math.sin(nameProgress * Math.PI * 8) > 0 ? 1 : 0,
             }}
-            animate={{ opacity: [1, 0, 1] }}
-            transition={{ duration: 0.6, repeat: Infinity }}
           />
         )}
       </div>

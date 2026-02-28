@@ -10,19 +10,27 @@ export const runtime = 'nodejs'
 let cachedBundlePath: string | null = null
 
 /**
- * Map quality setting to CRF value (lower = higher quality, bigger file).
- * CRF 10 = near-lossless, 18 = visually lossless, 28 = smaller/lower quality
+ * Map quality setting to target video bitrate string for Remotion/FFmpeg.
+ *
+ * We use `videoBitrate` (VBR target) instead of `crf` (constant rate factor)
+ * because CRF lets the encoder decide the bitrate based on scene complexity.
+ * Our animations are mostly flat colors/gradients/text on dark backgrounds,
+ * so CRF produces very low bitrates (~1 Mbps) even at CRF 10 — resulting
+ * in files far smaller than the user expects from their quality selection.
+ *
+ * With explicit videoBitrate, the encoder targets the specified rate and
+ * the output file size matches the UI estimate.
  */
-function qualityToCrf(quality: 'low' | 'medium' | 'high'): number {
+function qualityToBitrate(quality: 'low' | 'medium' | 'high'): string {
   switch (quality) {
     case 'low':
-      return 28
+      return '2M'    // 2 Mbps
     case 'medium':
-      return 18
+      return '5M'    // 5 Mbps
     case 'high':
-      return 10
+      return '10M'   // 10 Mbps
     default:
-      return 18
+      return '5M'
   }
 }
 
@@ -92,7 +100,26 @@ export async function POST(request: NextRequest) {
       codec: 'h264',
       outputLocation: outputPath,
       inputProps,
-      crf: qualityToCrf(exportConfig.quality),
+
+      // Use explicit bitrate targeting instead of CRF.
+      // CRF lets the encoder decide bitrate based on complexity — our flat
+      // color/gradient animations compress too well, producing ~1 Mbps even
+      // at CRF 10. videoBitrate enforces the user's selected quality level.
+      videoBitrate: qualityToBitrate(exportConfig.quality),
+
+      // Use PNG for intermediate frames — lossless, avoids JPEG compression
+      // artifacts in gradients, glows, and blur effects
+      imageFormat: 'png',
+
+      // Limit concurrency to avoid partial frame paints and ensure each frame
+      // fully renders CSS blur/filter effects before capture
+      concurrency: 2,
+
+      // Ensure heavy CSS filters (blur, mix-blend-mode) finish compositing
+      timeoutInMilliseconds: 60000,
+
+      // Use YUV 4:2:0 pixel format for broad player compatibility
+      pixelFormat: 'yuv420p',
     })
 
     // ── Step 4: Return the MP4 file ──

@@ -50,12 +50,18 @@ export function getQualityBitrate(quality: 'low' | 'medium' | 'high'): number {
 
 /**
  * Estimate file size in bytes from bitrate and duration.
+ *
+ * Uses a 0.3x compression factor because our animations are mostly flat
+ * colors, gradients, and text on dark backgrounds — libx264 compresses
+ * this content far below the target bitrate. Without this factor the UI
+ * would show ~42 MB but the actual file comes out at ~14 MB.
  */
 export function estimateFileSize(
   bitratesBps: number,
   durationMs: number
 ): number {
-  return Math.round((bitratesBps * (durationMs / 1000)) / 8)
+  const rawEstimate = (bitratesBps * (durationMs / 1000)) / 8
+  return Math.round(rawEstimate * 0.3)
 }
 
 /**

@@ -56,7 +56,6 @@ function WordByWordReveal({
               opacity: wordProgress,
               transform: `translateY(${(1 - wordProgress) * 20}px)`,
               color: isLastRevealed ? accentColor : textColor,
-              transition: 'color 0.3s ease',
               display: 'inline-block',
             }}
           >
@@ -100,7 +99,7 @@ function TypewriterReveal({
     >
       {visibleText}
       {showCursor && (
-        <motion.span
+        <span
           style={{
             display: 'inline-block',
             width: '3px',
@@ -108,9 +107,8 @@ function TypewriterReveal({
             backgroundColor: accentColor,
             marginLeft: '2px',
             verticalAlign: 'text-bottom',
+            opacity: Math.sin(progress * Math.PI * 10) > 0 ? 1 : 0,
           }}
-          animate={{ opacity: [1, 0, 1] }}
-          transition={{ duration: 0.8, repeat: Infinity }}
         />
       )}
     </div>
