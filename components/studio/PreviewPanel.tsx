@@ -1,17 +1,15 @@
 'use client'
 
 import { useRef, useState, useEffect, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
 import { useProjectStore } from '@/stores/project-store'
 import { PlaybackControls } from './PlaybackControls'
 import { AnimationPlayer } from '@/components/AnimationPlayer'
-import { Clapperboard, ChevronDown, Check, Monitor, Smartphone, Play, Maximize2 } from 'lucide-react'
+import { Clapperboard, ChevronDown, Check, Monitor, Smartphone } from 'lucide-react'
 import { CANVAS_PRESETS, PRESET_CATEGORIES, getPresetById } from '@/lib/canvas-presets'
 import { cn } from '@/lib/utils'
 
 export function PreviewPanel() {
-  const { animationConfig, canvasPresetId, setCanvasPresetId, projectId } = useProjectStore()
-  const router = useRouter()
+  const { animationConfig, canvasPresetId, setCanvasPresetId } = useProjectStore()
   const dropdownRef = useRef<HTMLDivElement>(null)
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
 
@@ -118,9 +116,8 @@ export function PreviewPanel() {
         <div
           id="export-capture-target"
           className={cn(
-            'relative rounded-lg overflow-hidden bg-[#0d1117] border border-border/50 shadow-2xl group',
-            isPortrait ? 'h-full' : isSquare ? 'h-full' : 'w-full',
-            animationConfig && 'cursor-pointer'
+            'relative rounded-lg overflow-hidden bg-[#0d1117] border border-border/50 shadow-2xl',
+            isPortrait ? 'h-full' : isSquare ? 'h-full' : 'w-full'
           )}
           style={{
             aspectRatio,
@@ -131,28 +128,9 @@ export function PreviewPanel() {
                 : { maxWidth: '900px', maxHeight: '100%' }
             ),
           }}
-          onClick={() => {
-            if (animationConfig && projectId) {
-              router.push(`/studio/${projectId}/preview`)
-            }
-          }}
         >
           {animationConfig ? (
-            <>
-              <AnimationPlayer />
-              {/* Hover overlay — click to open preview */}
-              <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/0 group-hover:bg-black/40 transition-colors duration-200">
-                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col items-center gap-2">
-                  <div className="w-14 h-14 rounded-full bg-white/15 backdrop-blur-md border border-white/20 flex items-center justify-center shadow-xl">
-                    <Play className="w-6 h-6 text-white ml-0.5" />
-                  </div>
-                  <span className="text-xs font-medium text-white/80 flex items-center gap-1.5">
-                    <Maximize2 className="w-3 h-3" />
-                    Open Preview
-                  </span>
-                </div>
-              </div>
-            </>
+            <AnimationPlayer />
           ) : (
             <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
               <div className="w-14 h-14 rounded-2xl bg-bg-elevated/80 border border-border flex items-center justify-center mb-4">
