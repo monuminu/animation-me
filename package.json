@@ -6,11 +6,21 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:push": "prisma db push",
+    "db:studio": "prisma studio",
+    "db:seed": "prisma db seed",
+    "db:reset": "prisma migrate reset",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@anthropic-ai/foundry-sdk": "^0.2.3",
     "@anthropic-ai/sdk": "^0.78.0",
+    "@auth/prisma-adapter": "^2.11.1",
+    "@prisma/adapter-pg": "^7.4.2",
+    "@prisma/client": "^7.4.2",
     "@radix-ui/react-dialog": "^1.1.4",
     "@radix-ui/react-scroll-area": "^1.2.2",
     "@radix-ui/react-separator": "^1.1.1",
@@ -25,6 +35,8 @@
     "lucide-react": "^0.468.0",
     "nanoid": "^5.0.9",
     "next": "14.2.22",
+    "next-auth": "^4.24.13",
+    "pg": "^8.19.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-dropzone": "^14.3.5",
@@ -34,12 +46,14 @@
   },
   "devDependencies": {
     "@types/node": "^20.17.12",
+    "@types/pg": "^8.18.0",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
     "autoprefixer": "^10.4.20",
     "eslint": "^8.57.1",
     "eslint-config-next": "14.2.22",
     "postcss": "^8.4.49",
+    "prisma": "^7.4.2",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.7.3"
   }

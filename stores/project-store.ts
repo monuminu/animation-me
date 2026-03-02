@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import type { AnimationConfig, ChatMessage, PlaybackState, FileTreeNode, CanvasPreset, RecordingState, ExportProgress } from '@/types'
 
+export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
+
 interface ProjectStore {
   // Project
   projectId: string | null
@@ -34,6 +36,10 @@ interface ProjectStore {
   isExporting: boolean
   exportProgress: ExportProgress | null
 
+  // Persistence
+  saveStatus: SaveStatus
+  lastSavedAt: number | null
+
   // Actions
   setProjectId: (id: string) => void
   setProjectTitle: (title: string) => void
@@ -58,6 +64,15 @@ interface ProjectStore {
   closeExportModal: () => void
   setIsExporting: (exporting: boolean) => void
   setExportProgress: (progress: ExportProgress | null) => void
+  setSaveStatus: (status: SaveStatus) => void
+  hydrateFromServer: (data: {
+    projectId: string
+    title: string
+    prompt: string
+    animationConfig: AnimationConfig | null
+    messages: ChatMessage[]
+    canvasPresetId: string
+  }) => void
   reset: () => void
 }
 
@@ -94,6 +109,8 @@ export const useProjectStore = create<ProjectStore>((set) => ({
   isExportModalOpen: false,
   isExporting: false,
   exportProgress: null,
+  saveStatus: 'idle',
+  lastSavedAt: null,
 
   setProjectId: (id) => set({ projectId: id }),
   setProjectTitle: (title) => set({ projectTitle: title }),
@@ -171,6 +188,24 @@ export const useProjectStore = create<ProjectStore>((set) => ({
   setIsExporting: (exporting) => set({ isExporting: exporting }),
   setExportProgress: (progress) => set({ exportProgress: progress }),
 
+  setSaveStatus: (status) => set({ saveStatus: status, lastSavedAt: status === 'saved' ? Date.now() : undefined }),
+
+  hydrateFromServer: (data) =>
+    set({
+      projectId: data.projectId,
+      projectTitle: data.title,
+      initialPrompt: data.prompt,
+      animationConfig: data.animationConfig,
+      messages: data.messages,
+      canvasPresetId: data.canvasPresetId,
+      playback: data.animationConfig
+        ? { ...initialPlayback, totalDuration: data.animationConfig.totalDuration }
+        : initialPlayback,
+      recording: initialRecording,
+      saveStatus: 'saved',
+      lastSavedAt: Date.now(),
+    }),
+
   reset: () =>
     set({
       projectId: null,
@@ -183,5 +218,7 @@ export const useProjectStore = create<ProjectStore>((set) => ({
       recording: initialRecording,
       fileTree: [],
       selectedFile: null,
+      saveStatus: 'idle',
+      lastSavedAt: null,
     }),
 }))

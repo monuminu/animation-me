@@ -1,10 +1,46 @@
 'use client'
 
-import { Sparkles, Download, Play, PanelRightOpen, PanelRightClose } from 'lucide-react'
+import { Sparkles, Download, Play, PanelRightOpen, PanelRightClose, Cloud, CloudOff, Loader2, Check } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { useProjectStore } from '@/stores/project-store'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip'
+
+function SaveStatusIndicator() {
+  const saveStatus = useProjectStore((s) => s.saveStatus)
+  const { data: session } = useSession()
+
+  if (!session?.user) return null
+
+  return (
+    <div className="flex items-center gap-1.5 text-xs text-text-muted">
+      {saveStatus === 'saving' && (
+        <>
+          <Loader2 className="w-3 h-3 animate-spin" />
+          <span>Saving...</span>
+        </>
+      )}
+      {saveStatus === 'saved' && (
+        <>
+          <Check className="w-3 h-3 text-emerald-500" />
+          <span className="text-emerald-500">Saved</span>
+        </>
+      )}
+      {saveStatus === 'error' && (
+        <>
+          <CloudOff className="w-3 h-3 text-red-400" />
+          <span className="text-red-400">Save failed</span>
+        </>
+      )}
+      {saveStatus === 'idle' && (
+        <>
+          <Cloud className="w-3 h-3" />
+        </>
+      )}
+    </div>
+  )
+}
 
 export function TopBar() {
   const { projectId, projectTitle, animationConfig, isFileTreeOpen, toggleFileTree, openExportModal } = useProjectStore()
@@ -32,6 +68,7 @@ export function TopBar() {
         <span className="text-sm text-text-secondary truncate max-w-[200px]">
           {projectTitle}
         </span>
+        <SaveStatusIndicator />
       </div>
 
       {/* Center: Progress / Status */}

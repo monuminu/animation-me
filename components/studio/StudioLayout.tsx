@@ -1,6 +1,9 @@
 'use client'
 
 import { useProjectStore } from '@/stores/project-store'
+import { useSession } from 'next-auth/react'
+import Link from 'next/link'
+import { LogIn } from 'lucide-react'
 import { TopBar } from './TopBar'
 import { ChatPanel } from './ChatPanel'
 import { PreviewPanel } from './PreviewPanel'
@@ -9,6 +12,25 @@ import { BottomBar } from './BottomBar'
 import { PreviewModal } from './PreviewModal'
 import { ExportModal } from './ExportModal'
 import { useResizePanel } from '@/hooks/useResizePanel'
+
+function SignInBanner() {
+  const { data: session, status } = useSession()
+
+  if (status === 'loading' || session?.user) return null
+
+  return (
+    <div className="flex items-center justify-center gap-2 px-4 py-2 bg-accent/10 border-b border-accent/20 text-xs text-accent">
+      <LogIn className="w-3.5 h-3.5" />
+      <span>Your work won&apos;t be saved.</span>
+      <Link
+        href="/auth/signin"
+        className="font-medium underline underline-offset-2 hover:text-accent-hover transition-colors"
+      >
+        Sign in to save your projects
+      </Link>
+    </div>
+  )
+}
 
 export function StudioLayout() {
   const { chatPanelWidth, fileTreePanelWidth, isFileTreeOpen, setChatPanelWidth, setFileTreePanelWidth } = useProjectStore()
@@ -32,6 +54,7 @@ export function StudioLayout() {
   return (
     <div className="h-screen flex flex-col bg-bg overflow-hidden">
       <TopBar />
+      <SignInBanner />
 
       <div className="flex-1 flex min-h-0">
         {/* Chat Panel */}
