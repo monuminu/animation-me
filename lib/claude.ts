@@ -99,6 +99,24 @@ Each scene can include an optional "transition" property that controls how it tr
 - **clipCircle** creates dramatic focal reveals — use sparingly
 - **Transition duration** should be 10-15% of the shorter scene's duration
 - **Never exceed 800ms** for transitions
+
+## Scene Delay (Pause Between Scenes)
+
+Each scene can include an optional \`"delay"\` property (in milliseconds, default 0) that freezes the last frame of the scene for the specified duration before the transition to the next scene begins.
+
+\`\`\`
+"delay": 500  // 500ms pause showing the last frame before transitioning
+\`\`\`
+
+### Delay Best Practices
+
+- **Default to 0ms** — most scenes flow directly into transitions without a pause
+- **500–1500ms** works well for text-heavy scenes where the audience needs reading time
+- **CTA / final scenes**: 1000–2000ms delay lets the call-to-action linger
+- **Fast intros / logo reveals**: 0ms delay — keep the energy high
+- **Stats / data scenes**: 800–1200ms so viewers can absorb the numbers
+- **Transitions happen AFTER the delay** — the delay extends the scene's visible time, then the transition begins
+- **totalDuration** must include all delays: sum of (duration + delay) for every scene
 `
 
 function buildSystemPrompt(): string {
@@ -137,6 +155,7 @@ The JSON config format:
       "id": "unique-scene-id",
       "template": "TemplateName",
       "duration": 4000,
+      "delay": 500,
       "data": { ... },
       "transition": { "type": "fade", "duration": 400 }
     }
@@ -144,7 +163,7 @@ The JSON config format:
 }
 \`\`\`
 
-**Note:** The "transition" on each scene controls how it transitions to the NEXT scene. The first scene typically has no transition. See the "Scene Transitions" section below for all 18 available types.
+**Note:** The "transition" on each scene controls how it transitions to the NEXT scene. The first scene typically has no transition. The "delay" is an optional pause (in ms) after the scene content finishes and before the transition/next scene begins. See the sections below for details.
 
 ${TEMPLATE_SCHEMAS}
 
@@ -156,7 +175,7 @@ ${TEMPLATE_SCHEMAS}
 4. **Dark by default** — use dark backgrounds (#0d1117, #0f172a, #1a1a2e) with vibrant accent colors
 5. **Realistic durations** — short videos: 15-25s, standard: 30-50s, detailed: 50-80s
 6. **Scene durations**: intro 5-7s, content scenes 6-9s, CTA 5-6s
-7. **totalDuration** MUST equal the sum of all scene durations
+7. **totalDuration** MUST equal the sum of all (duration + delay) values for every scene
 8. **Color consistency** — use the same color palette across all scenes
 9. **Content quality** — write compelling, realistic copy for headlines and descriptions
 10. **3-7 scenes** is the sweet spot for most animations
@@ -193,7 +212,7 @@ export async function* streamAnimation(
 
   const stream = anthropic.messages.stream({
     model: process.env.ANTHROPIC_FOUNDRY_DEPLOYMENT || 'claude-sonnet-4-6',
-    max_tokens: 4096,
+    max_tokens: 32000,
     thinking: {
         "type": "adaptive"
     },

@@ -2,6 +2,7 @@ export interface Scene {
   id: string
   template: string
   duration: number
+  delay?: number  // ms pause after scene, before next scene/transition
   data: Record<string, unknown>
   transition?: TransitionConfig
 }

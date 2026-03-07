@@ -157,6 +157,11 @@ function extractConfigFromText(text: string): AnimationConfig | null {
     try {
       const parsed = JSON.parse(jsonMatch[1])
       if (parsed.scenes && Array.isArray(parsed.scenes)) {
+        // Ensure delay is a valid number on each scene
+        parsed.scenes = parsed.scenes.map((s: Record<string, unknown>) => ({
+          ...s,
+          delay: typeof s.delay === 'number' ? Math.max(0, s.delay) : 0,
+        }))
         return parsed as AnimationConfig
       }
     } catch {}
@@ -168,6 +173,10 @@ function extractConfigFromText(text: string): AnimationConfig | null {
     try {
       const parsed = JSON.parse(rawMatch[0])
       if (parsed.scenes && Array.isArray(parsed.scenes)) {
+        parsed.scenes = parsed.scenes.map((s: Record<string, unknown>) => ({
+          ...s,
+          delay: typeof s.delay === 'number' ? Math.max(0, s.delay) : 0,
+        }))
         return parsed as AnimationConfig
       }
     } catch {}
@@ -202,10 +211,11 @@ function buildFileTree(config: AnimationConfig): FileTreeNode[] {
   ]
 }
 
-function generateSceneCode(scene: { id: string; template: string; duration: number; data: Record<string, unknown> }): string {
+function generateSceneCode(scene: { id: string; template: string; duration: number; delay?: number; data: Record<string, unknown> }): string {
   return `// Scene: ${scene.id}
 // Template: ${scene.template}
 // Duration: ${scene.duration}ms
+// Delay: ${scene.delay ?? 0}ms
 
 import { motion } from 'framer-motion'
 

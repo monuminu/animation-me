@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { AnimationConfig, ChatMessage, PlaybackState, FileTreeNode, CanvasPreset, RecordingState, ExportProgress } from '@/types'
+import { computeTotalDuration } from '@/lib/scene-utils'
 
 export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 
@@ -64,6 +65,7 @@ interface ProjectStore {
   closeExportModal: () => void
   setIsExporting: (exporting: boolean) => void
   setExportProgress: (progress: ExportProgress | null) => void
+  updateSceneDelay: (sceneIndex: number, delay: number) => void
   setSaveStatus: (status: SaveStatus) => void
   hydrateFromServer: (data: {
     projectId: string
@@ -187,6 +189,26 @@ export const useProjectStore = create<ProjectStore>((set) => ({
   closeExportModal: () => set({ isExportModalOpen: false, exportProgress: null }),
   setIsExporting: (exporting) => set({ isExporting: exporting }),
   setExportProgress: (progress) => set({ exportProgress: progress }),
+
+  updateSceneDelay: (sceneIndex, delay) =>
+    set((state) => {
+      if (!state.animationConfig) return state
+      const scenes = state.animationConfig.scenes.map((scene, i) =>
+        i === sceneIndex ? { ...scene, delay: Math.max(0, delay) } : scene
+      )
+      const newTotalDuration = computeTotalDuration(scenes)
+      return {
+        animationConfig: {
+          ...state.animationConfig,
+          scenes,
+          totalDuration: newTotalDuration,
+        },
+        playback: {
+          ...state.playback,
+          totalDuration: newTotalDuration,
+        },
+      }
+    }),
 
   setSaveStatus: (status) => set({ saveStatus: status, lastSavedAt: status === 'saved' ? Date.now() : undefined }),
 

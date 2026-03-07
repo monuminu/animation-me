@@ -2,6 +2,7 @@ import React from 'react'
 import { useCurrentFrame, useVideoConfig } from 'remotion'
 import { SceneRenderer } from '@/components/SceneRenderer'
 import { getTransition, clamp } from '@/lib/video'
+import { getEffectiveSceneDuration } from '@/lib/scene-utils'
 import type { AnimationConfig } from '@/types'
 
 export type RemotionCompositionProps = {
@@ -31,15 +32,16 @@ export const RemotionComposition: React.FC<RemotionCompositionProps> = ({
   // Convert frame to time in milliseconds
   const currentTime = (frame / fps) * 1000
 
-  // Determine current scene index and elapsed time before it
+  // Determine current scene index and elapsed time before it (accounting for delays)
   let elapsed = 0
   let currentSceneIndex = 0
   for (let i = 0; i < scenes.length; i++) {
-    if (currentTime < elapsed + scenes[i].duration) {
+    const effectiveDuration = getEffectiveSceneDuration(scenes[i])
+    if (currentTime < elapsed + effectiveDuration) {
       currentSceneIndex = i
       break
     }
-    elapsed += scenes[i].duration
+    elapsed += effectiveDuration
     if (i === scenes.length - 1) {
       currentSceneIndex = i
     }
@@ -48,17 +50,28 @@ export const RemotionComposition: React.FC<RemotionCompositionProps> = ({
   // Calculate progress within current scene
   const sceneTime = currentTime - elapsed
   const currentScene = scenes[currentSceneIndex]
-  const progress = currentScene ? Math.min(sceneTime / currentScene.duration, 1) : 0
+  const contentDuration = currentScene?.duration ?? 0
+  const sceneDelay = currentScene?.delay ?? 0
 
-  // Determine transition state (mirrors AnimationPlayer.tsx lines 28-44)
+  // During delay phase, freeze progress at 1 (last frame stays visible)
+  const isInDelay = sceneTime >= contentDuration
+  const progress = currentScene
+    ? isInDelay
+      ? 1
+      : Math.min(sceneTime / contentDuration, 1)
+    : 0
+
+  // Determine transition state (mirrors AnimationPlayer.tsx)
   const nextSceneIndex =
     currentSceneIndex + 1 < scenes.length ? currentSceneIndex + 1 : null
   const transitionConfig = currentScene?.transition
   const transition = getTransition(transitionConfig?.type)
   const transitionDuration = transitionConfig?.duration ?? transition.defaultDuration
 
+  // Transition window overlaps the end of the delay period
+  const totalSceneWindow = contentDuration + sceneDelay
   const transitionWindowStart = currentScene
-    ? currentScene.duration - transitionDuration
+    ? totalSceneWindow - transitionDuration
     : 0
   const isInTransition =
     transitionDuration > 0 &&

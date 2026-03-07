@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useCallback } from 'react'
 import { useProjectStore } from '@/stores/project-store'
+import { getEffectiveSceneDuration } from '@/lib/scene-utils'
 
 export function usePlayback() {
   const { playback, animationConfig, setPlayback } = useProjectStore()
@@ -32,15 +33,16 @@ export function usePlayback() {
       newTime = 0
     }
 
-    // Determine current scene
+    // Determine current scene (accounting for per-scene delays)
     let elapsed = 0
     let sceneIndex = 0
     for (let i = 0; i < config.scenes.length; i++) {
-      if (newTime < elapsed + config.scenes[i].duration) {
+      const effectiveDuration = getEffectiveSceneDuration(config.scenes[i])
+      if (newTime < elapsed + effectiveDuration) {
         sceneIndex = i
         break
       }
-      elapsed += config.scenes[i].duration
+      elapsed += effectiveDuration
       if (i === config.scenes.length - 1) {
         sceneIndex = i
       }
@@ -77,11 +79,12 @@ export function usePlayback() {
     let elapsed = 0
     let sceneIndex = 0
     for (let i = 0; i < config.scenes.length; i++) {
-      if (clampedTime < elapsed + config.scenes[i].duration) {
+      const effectiveDuration = getEffectiveSceneDuration(config.scenes[i])
+      if (clampedTime < elapsed + effectiveDuration) {
         sceneIndex = i
         break
       }
-      elapsed += config.scenes[i].duration
+      elapsed += effectiveDuration
       if (i === config.scenes.length - 1) {
         sceneIndex = i
       }

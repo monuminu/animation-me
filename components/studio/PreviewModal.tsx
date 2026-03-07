@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { X, Play, Pause, SkipBack, SkipForward, Gauge } from 'lucide-react'
+import { X, Play, Pause, SkipBack, SkipForward, Gauge, Timer } from 'lucide-react'
 import { useProjectStore } from '@/stores/project-store'
 import { usePlayback } from '@/hooks/usePlayback'
 import { AnimationPlayer } from '@/components/AnimationPlayer'
@@ -17,14 +17,18 @@ export function PreviewModal() {
     togglePlayback,
     setPlayback,
     canvasPresetId,
+    updateSceneDelay,
   } = useProjectStore()
 
   const { seekTo } = usePlayback()
   const controlsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [showControls, setShowControls] = useState(true)
 
-  const { isPlaying, currentTime, totalDuration, speed } = playback
+  const { isPlaying, currentTime, totalDuration, speed, currentSceneIndex } = playback
   const progress = totalDuration > 0 ? (currentTime / totalDuration) * 100 : 0
+
+  const currentScene = animationConfig?.scenes[currentSceneIndex]
+  const currentDelay = currentScene?.delay ?? 0
 
   const preset = getPresetById(canvasPresetId)
   const aspectRatio = `${preset.width} / ${preset.height}`
@@ -224,8 +228,38 @@ export function PreviewModal() {
             </div>
           </div>
 
-          {/* Right — speed + shortcuts hint */}
+          {/* Right — delay + speed + shortcuts hint */}
           <div className="flex items-center gap-3">
+            {/* Scene Delay */}
+            <div
+              className="flex items-center gap-0.5"
+              title={`Scene ${currentSceneIndex + 1} delay`}
+            >
+              <Timer className="w-3.5 h-3.5 text-white/50 mr-0.5" />
+              <button
+                onClick={() => {
+                  updateSceneDelay(currentSceneIndex, Math.max(0, currentDelay - 100))
+                  resetControlsTimer()
+                }}
+                disabled={currentDelay <= 0}
+                className="w-6 h-6 rounded flex items-center justify-center text-xs text-white/60 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              >
+                −
+              </button>
+              <span className="text-xs text-white/60 font-mono min-w-[36px] text-center">
+                {currentDelay > 0 ? `${currentDelay}ms` : '0ms'}
+              </span>
+              <button
+                onClick={() => {
+                  updateSceneDelay(currentSceneIndex, currentDelay + 100)
+                  resetControlsTimer()
+                }}
+                className="w-6 h-6 rounded flex items-center justify-center text-xs text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+              >
+                +
+              </button>
+            </div>
+
             <button
               onClick={handleSpeedChange}
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-white/60 hover:text-white hover:bg-white/10 transition-colors font-mono"

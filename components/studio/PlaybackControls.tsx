@@ -1,17 +1,20 @@
 'use client'
 
-import { Play, Pause, SkipBack, SkipForward, Gauge } from 'lucide-react'
+import { Play, Pause, SkipBack, SkipForward, Gauge, Timer } from 'lucide-react'
 import { useProjectStore } from '@/stores/project-store'
 import { formatTime } from '@/lib/utils'
 import { usePlayback } from '@/hooks/usePlayback'
 
 export function PlaybackControls() {
-  const { playback, animationConfig, togglePlayback, setPlayback } = useProjectStore()
+  const { playback, animationConfig, togglePlayback, setPlayback, updateSceneDelay } = useProjectStore()
   const { seekTo } = usePlayback()
-  const { isPlaying, currentTime, totalDuration, speed } = playback
+  const { isPlaying, currentTime, totalDuration, speed, currentSceneIndex } = playback
 
   const progress = totalDuration > 0 ? (currentTime / totalDuration) * 100 : 0
   const hasAnimation = !!animationConfig
+
+  const currentScene = animationConfig?.scenes[currentSceneIndex]
+  const currentDelay = currentScene?.delay ?? 0
 
   const handleScrubberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseFloat(e.target.value)
@@ -27,6 +30,16 @@ export function PlaybackControls() {
     const currentIndex = speeds.indexOf(speed)
     const nextSpeed = speeds[(currentIndex + 1) % speeds.length]
     setPlayback({ speed: nextSpeed })
+  }
+
+  const handleDelayDecrease = () => {
+    if (!hasAnimation) return
+    updateSceneDelay(currentSceneIndex, Math.max(0, currentDelay - 100))
+  }
+
+  const handleDelayIncrease = () => {
+    if (!hasAnimation) return
+    updateSceneDelay(currentSceneIndex, currentDelay + 100)
   }
 
   return (
@@ -90,6 +103,31 @@ export function PlaybackControls() {
       <span className="text-xs text-text-muted font-mono min-w-[40px] text-right">
         {formatTime(totalDuration)}
       </span>
+
+      {/* Scene Delay */}
+      <div
+        className="flex items-center gap-0.5"
+        title={`Scene ${currentSceneIndex + 1} delay`}
+      >
+        <Timer className="w-3 h-3 text-text-muted mr-0.5" />
+        <button
+          onClick={handleDelayDecrease}
+          disabled={!hasAnimation || currentDelay <= 0}
+          className="w-5 h-5 rounded flex items-center justify-center text-xs text-text-muted hover:bg-bg-hover hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+        >
+          −
+        </button>
+        <span className="text-xs text-text-muted font-mono min-w-[36px] text-center">
+          {currentDelay > 0 ? `${currentDelay}ms` : '0ms'}
+        </span>
+        <button
+          onClick={handleDelayIncrease}
+          disabled={!hasAnimation}
+          className="w-5 h-5 rounded flex items-center justify-center text-xs text-text-muted hover:bg-bg-hover hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+        >
+          +
+        </button>
+      </div>
 
       {/* Speed */}
       <button

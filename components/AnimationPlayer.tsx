@@ -5,6 +5,7 @@ import { usePlayback } from '@/hooks/usePlayback'
 import { SceneRenderer } from './SceneRenderer'
 import { getTransition } from '@/lib/video'
 import { clamp } from '@/lib/video'
+import { getEffectiveSceneDuration } from '@/lib/scene-utils'
 
 export function AnimationPlayer() {
   const { animationConfig, playback } = useProjectStore()
@@ -15,14 +16,23 @@ export function AnimationPlayer() {
   const { scenes } = animationConfig
   const { currentSceneIndex, currentTime } = playback
 
-  // Calculate progress within current scene
+  // Calculate progress within current scene (accounting for per-scene delays)
   let elapsed = 0
   for (let i = 0; i < currentSceneIndex; i++) {
-    elapsed += scenes[i].duration
+    elapsed += getEffectiveSceneDuration(scenes[i])
   }
   const sceneTime = currentTime - elapsed
   const currentScene = scenes[currentSceneIndex]
-  const progress = currentScene ? Math.min(sceneTime / currentScene.duration, 1) : 0
+  const contentDuration = currentScene?.duration ?? 0
+  const sceneDelay = currentScene?.delay ?? 0
+
+  // During delay phase, freeze progress at 1 (last frame stays visible)
+  const isInDelay = sceneTime >= contentDuration
+  const progress = currentScene
+    ? isInDelay
+      ? 1
+      : Math.min(sceneTime / contentDuration, 1)
+    : 0
 
   // Determine transition state
   const nextSceneIndex = currentSceneIndex + 1 < scenes.length ? currentSceneIndex + 1 : null
@@ -30,10 +40,12 @@ export function AnimationPlayer() {
   const transition = getTransition(transitionConfig?.type)
   const transitionDuration = transitionConfig?.duration ?? transition.defaultDuration
 
-  // Calculate transition progress: how far into the transition window we are
-  // Transition window = last `transitionDuration` ms of the current scene
+  // Transition window overlaps the end of the delay period (not the content)
+  // [== scene content ==][=== delay ===]
+  //                          [transition]  <- overlaps end of delay
+  const totalSceneWindow = contentDuration + sceneDelay
   const transitionWindowStart = currentScene
-    ? currentScene.duration - transitionDuration
+    ? totalSceneWindow - transitionDuration
     : 0
   const isInTransition =
     transitionDuration > 0 &&

@@ -1,9 +1,11 @@
 import type { Scene } from '@/types'
+import { getEffectiveSceneDuration } from '@/lib/scene-utils'
 
 /**
  * Given an array of scenes and a time in milliseconds,
  * returns the current scene index, the elapsed time before the scene,
  * and the progress (0–1) within that scene.
+ * Accounts for per-scene delay: during the delay phase, progress is frozen at 1.
  */
 export function getSceneAtTime(
   scenes: Scene[],
@@ -12,16 +14,21 @@ export function getSceneAtTime(
   let elapsed = 0
 
   for (let i = 0; i < scenes.length; i++) {
-    const sceneDuration = scenes[i].duration
-    if (timeMs < elapsed + sceneDuration) {
+    const effectiveDuration = getEffectiveSceneDuration(scenes[i])
+    if (timeMs < elapsed + effectiveDuration) {
       const sceneTime = timeMs - elapsed
+      const contentDuration = scenes[i].duration
+      // During delay phase, freeze progress at 1
+      const progress = sceneTime >= contentDuration
+        ? 1
+        : Math.min(sceneTime / contentDuration, 1)
       return {
         sceneIndex: i,
-        progress: Math.min(sceneTime / sceneDuration, 1),
+        progress,
         elapsed,
       }
     }
-    elapsed += sceneDuration
+    elapsed += effectiveDuration
   }
 
   // Past the end — return last scene at progress 1
