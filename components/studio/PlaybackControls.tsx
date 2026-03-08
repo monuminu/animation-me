@@ -1,14 +1,15 @@
 'use client'
 
-import { Play, Pause, SkipBack, SkipForward, Gauge, Timer } from 'lucide-react'
+import { Play, Pause, SkipBack, SkipForward, Gauge, Timer, Volume2, VolumeX } from 'lucide-react'
 import { useProjectStore } from '@/stores/project-store'
 import { formatTime } from '@/lib/utils'
 import { usePlayback } from '@/hooks/usePlayback'
 
 export function PlaybackControls() {
-  const { playback, animationConfig, togglePlayback, setPlayback, updateSceneDelay } = useProjectStore()
+  const { playback, animationConfig, narration, togglePlayback, setPlayback, updateSceneDelay, setNarrationMuted } = useProjectStore()
   const { seekTo } = usePlayback()
   const { isPlaying, currentTime, totalDuration, speed, currentSceneIndex } = playback
+  const { muted: narrationMuted, sceneAudios } = narration
 
   const progress = totalDuration > 0 ? (currentTime / totalDuration) * 100 : 0
   const hasAnimation = !!animationConfig
@@ -128,6 +129,20 @@ export function PlaybackControls() {
           +
         </button>
       </div>
+
+      {/* Narration Volume */}
+      <button
+        onClick={() => setNarrationMuted(!narrationMuted)}
+        disabled={!hasAnimation || sceneAudios.filter((a) => a.status === 'ready').length === 0}
+        className="p-1.5 rounded-md hover:bg-bg-hover text-text-muted hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+        title={narrationMuted ? 'Unmute narration' : 'Mute narration'}
+      >
+        {narrationMuted ? (
+          <VolumeX className="w-3.5 h-3.5" />
+        ) : (
+          <Volume2 className="w-3.5 h-3.5" />
+        )}
+      </button>
 
       {/* Speed */}
       <button

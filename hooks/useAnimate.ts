@@ -3,6 +3,7 @@
 import { useCallback } from 'react'
 import { useProjectStore } from '@/stores/project-store'
 import { generateId } from '@/lib/utils'
+import { useNarration } from '@/hooks/useNarration'
 import type { ChatMessage, AnimationConfig, FileTreeNode } from '@/types'
 
 export function useAnimate() {
@@ -16,6 +17,8 @@ export function useAnimate() {
     setFileTree,
     setPlayback,
   } = useProjectStore()
+
+  const { generateNarration } = useNarration()
 
   const generate = useCallback(async (prompt: string) => {
     // Add user message
@@ -106,12 +109,38 @@ export function useAnimate() {
         const tree = buildFileTree(animConfig)
         setFileTree(tree)
 
-        // Start playback
+        // Start playback immediately (narration will catch up)
         setPlayback({
           isPlaying: true,
           currentTime: 0,
           totalDuration: animConfig.totalDuration,
           currentSceneIndex: 0,
+        })
+
+        // Generate narration audio in the background (non-blocking)
+        // When TTS completes, update config with extended durations if needed
+        generateNarration(animConfig).then((adjustedConfig) => {
+          if (adjustedConfig !== animConfig) {
+            const store = useProjectStore.getState()
+            // Only update durations — don't reset playback position
+            const currentPlayback = store.playback
+            store.setPlayback({
+              totalDuration: adjustedConfig.totalDuration,
+            })
+            // Update the config without triggering a full reset
+            // We directly update animationConfig without calling setAnimationConfig
+            // to avoid clearing the narration state we just built
+            useProjectStore.setState({
+              animationConfig: adjustedConfig,
+              playback: {
+                ...currentPlayback,
+                totalDuration: adjustedConfig.totalDuration,
+              },
+            })
+          }
+        }).catch((err) => {
+          console.error('Narration generation failed:', err)
+          // Non-fatal — animation continues without audio
         })
       } else {
         // Try to parse config from the response text
@@ -132,6 +161,23 @@ export function useAnimate() {
             totalDuration: extracted.totalDuration,
             currentSceneIndex: 0,
           })
+
+          // Generate narration for extracted config too
+          generateNarration(extracted).then((adjustedConfig) => {
+            if (adjustedConfig !== extracted) {
+              const store = useProjectStore.getState()
+              const currentPlayback = store.playback
+              useProjectStore.setState({
+                animationConfig: adjustedConfig,
+                playback: {
+                  ...currentPlayback,
+                  totalDuration: adjustedConfig.totalDuration,
+                },
+              })
+            }
+          }).catch((err) => {
+            console.error('Narration generation failed:', err)
+          })
         } else {
           updateMessage(assistantId, { isStreaming: false })
         }
@@ -145,7 +191,7 @@ export function useAnimate() {
     } finally {
       setIsGenerating(false)
     }
-  }, [messages, addMessage, updateMessage, setIsGenerating, setAnimationConfig, setProjectTitle, setFileTree, setPlayback])
+  }, [messages, addMessage, updateMessage, setIsGenerating, setAnimationConfig, setProjectTitle, setFileTree, setPlayback, generateNarration])
 
   return { generate }
 }

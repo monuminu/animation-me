@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { AnimationConfig, ChatMessage, PlaybackState, FileTreeNode, CanvasPreset, RecordingState, ExportProgress } from '@/types'
+import type { AnimationConfig, ChatMessage, PlaybackState, FileTreeNode, CanvasPreset, RecordingState, ExportProgress, NarrationState, SceneAudio } from '@/types'
 import { computeTotalDuration } from '@/lib/scene-utils'
 
 export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
@@ -22,6 +22,9 @@ interface ProjectStore {
 
   // Recording
   recording: RecordingState
+
+  // Narration
+  narration: NarrationState
 
   // File tree
   fileTree: FileTreeNode[]
@@ -66,6 +69,12 @@ interface ProjectStore {
   setIsExporting: (exporting: boolean) => void
   setExportProgress: (progress: ExportProgress | null) => void
   updateSceneDelay: (sceneIndex: number, delay: number) => void
+  setNarrationMuted: (muted: boolean) => void
+  setNarrationGenerating: (generating: boolean) => void
+  setNarrationProgress: (progress: number) => void
+  setSceneAudio: (sceneId: string, updates: Partial<SceneAudio>) => void
+  setAllSceneAudios: (audios: SceneAudio[]) => void
+  clearNarration: () => void
   setSaveStatus: (status: SaveStatus) => void
   hydrateFromServer: (data: {
     projectId: string
@@ -92,6 +101,15 @@ const initialRecording: RecordingState = {
   hasEnded: false,
 }
 
+const initialNarration: NarrationState = {
+  enabled: true,
+  muted: false,
+  voiceId: '',
+  sceneAudios: [],
+  isGenerating: false,
+  generationProgress: 0,
+}
+
 export const useProjectStore = create<ProjectStore>((set) => ({
   projectId: null,
   projectTitle: 'Untitled Project',
@@ -101,6 +119,7 @@ export const useProjectStore = create<ProjectStore>((set) => ({
   animationConfig: null,
   playback: initialPlayback,
   recording: initialRecording,
+  narration: initialNarration,
   fileTree: [],
   selectedFile: null,
   chatPanelWidth: 320,
@@ -131,12 +150,21 @@ export const useProjectStore = create<ProjectStore>((set) => ({
   setIsGenerating: (generating) => set({ isGenerating: generating }),
 
   setAnimationConfig: (config) =>
-    set({
-      animationConfig: config,
-      playback: config
-        ? { ...initialPlayback, totalDuration: config.totalDuration }
-        : initialPlayback,
-      recording: initialRecording,
+    set((state) => {
+      // Revoke old blob URLs to prevent memory leaks
+      for (const audio of state.narration.sceneAudios) {
+        if (audio.audioUrl && audio.audioUrl.startsWith('blob:')) {
+          try { URL.revokeObjectURL(audio.audioUrl) } catch {}
+        }
+      }
+      return {
+        animationConfig: config,
+        playback: config
+          ? { ...initialPlayback, totalDuration: config.totalDuration }
+          : initialPlayback,
+        recording: initialRecording,
+        narration: initialNarration,
+      }
     }),
 
   setPlayback: (updates) =>
@@ -210,6 +238,66 @@ export const useProjectStore = create<ProjectStore>((set) => ({
       }
     }),
 
+  setNarrationMuted: (muted) =>
+    set((state) => ({
+      narration: { ...state.narration, muted },
+    })),
+
+  setNarrationGenerating: (generating) =>
+    set((state) => ({
+      narration: { ...state.narration, isGenerating: generating },
+    })),
+
+  setNarrationProgress: (progress) =>
+    set((state) => ({
+      narration: { ...state.narration, generationProgress: progress },
+    })),
+
+  setSceneAudio: (sceneId, updates) =>
+    set((state) => {
+      const existing = state.narration.sceneAudios.find((a) => a.sceneId === sceneId)
+      if (existing) {
+        return {
+          narration: {
+            ...state.narration,
+            sceneAudios: state.narration.sceneAudios.map((a) =>
+              a.sceneId === sceneId ? { ...a, ...updates } : a
+            ),
+          },
+        }
+      }
+      // Create new entry
+      const newAudio: SceneAudio = {
+        sceneId,
+        audioUrl: '',
+        audioDuration: 0,
+        status: 'pending',
+        ...updates,
+      }
+      return {
+        narration: {
+          ...state.narration,
+          sceneAudios: [...state.narration.sceneAudios, newAudio],
+        },
+      }
+    }),
+
+  setAllSceneAudios: (audios) =>
+    set((state) => ({
+      narration: { ...state.narration, sceneAudios: audios },
+    })),
+
+  clearNarration: () =>
+    set((state) => {
+      // Revoke all blob URLs to prevent memory leaks
+      for (const audio of state.narration.sceneAudios) {
+        if (audio.audioUrl && audio.audioUrl.startsWith('blob:')) {
+          try { URL.revokeObjectURL(audio.audioUrl) } catch {}
+        }
+      }
+      return { narration: initialNarration }
+    }),
+
   setSaveStatus: (status) => set({ saveStatus: status, lastSavedAt: status === 'saved' ? Date.now() : undefined }),
 
   hydrateFromServer: (data) =>
@@ -224,6 +312,7 @@ export const useProjectStore = create<ProjectStore>((set) => ({
         ? { ...initialPlayback, totalDuration: data.animationConfig.totalDuration }
         : initialPlayback,
       recording: initialRecording,
+      narration: initialNarration,
       saveStatus: 'saved',
       lastSavedAt: Date.now(),
     }),
@@ -238,6 +327,7 @@ export const useProjectStore = create<ProjectStore>((set) => ({
       animationConfig: null,
       playback: initialPlayback,
       recording: initialRecording,
+      narration: initialNarration,
       fileTree: [],
       selectedFile: null,
       saveStatus: 'idle',

@@ -96,6 +96,7 @@ export function useExportMP4(): UseExportMP4Return {
         body: JSON.stringify({
           animationConfig,
           exportConfig: config,
+          sceneAudioUrls: await uploadNarrationAudio(store),
         }),
         signal: abortController.signal,
       })
@@ -174,4 +175,51 @@ export function useExportMP4(): UseExportMP4Return {
     cancelExport,
     isExporting,
   }
+}
+
+/**
+ * Upload narration audio blob URLs to temp files on the server,
+ * returning a map of sceneId → server file path for Remotion rendering.
+ */
+async function uploadNarrationAudio(
+  store: ReturnType<typeof useProjectStore.getState>
+): Promise<Record<string, string> | undefined> {
+  const { narration } = store
+  const readyAudios = narration.sceneAudios.filter(
+    (a) => a.status === 'ready' && a.audioUrl
+  )
+
+  if (readyAudios.length === 0) return undefined
+
+  const sceneAudioUrls: Record<string, string> = {}
+
+  await Promise.all(
+    readyAudios.map(async (sceneAudio) => {
+      try {
+        // Fetch the blob URL to get the audio data
+        const audioResponse = await fetch(sceneAudio.audioUrl)
+        const audioBlob = await audioResponse.blob()
+
+        // Upload to temp server
+        const formData = new FormData()
+        formData.append('audio', audioBlob, `${sceneAudio.sceneId}.mp3`)
+        formData.append('sceneId', sceneAudio.sceneId)
+
+        const uploadResponse = await fetch('/api/tts/upload', {
+          method: 'POST',
+          body: formData,
+        })
+
+        if (uploadResponse.ok) {
+          const { filePath } = await uploadResponse.json()
+          sceneAudioUrls[sceneAudio.sceneId] = filePath
+        }
+      } catch (err) {
+        console.error(`Failed to upload audio for scene ${sceneAudio.sceneId}:`, err)
+        // Non-fatal — scene will render without audio
+      }
+    })
+  )
+
+  return Object.keys(sceneAudioUrls).length > 0 ? sceneAudioUrls : undefined
 }

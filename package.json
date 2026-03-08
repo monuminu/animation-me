@@ -19,6 +19,7 @@
     "@anthropic-ai/foundry-sdk": "^0.2.3",
     "@anthropic-ai/sdk": "^0.78.0",
     "@auth/prisma-adapter": "^2.11.1",
+    "@elevenlabs/elevenlabs-js": "^2.38.1",
     "@prisma/adapter-pg": "^7.4.2",
     "@prisma/client": "^7.4.2",
     "@radix-ui/react-dialog": "^1.1.4",

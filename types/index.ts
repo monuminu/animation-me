@@ -3,6 +3,7 @@ export interface Scene {
   template: string
   duration: number
   delay?: number  // ms pause after scene, before next scene/transition
+  narration?: string  // Voiceover script text for TTS
   data: Record<string, unknown>
   transition?: TransitionConfig
 }
@@ -167,4 +168,21 @@ export interface ExportProgress {
   totalFrames: number
   percent: number
   error?: string
+}
+
+export interface SceneAudio {
+  sceneId: string
+  audioUrl: string       // Blob URL (preview) or file path (export)
+  audioDuration: number  // ms, measured from actual audio
+  status: 'pending' | 'generating' | 'ready' | 'error'
+  error?: string
+}
+
+export interface NarrationState {
+  enabled: boolean
+  muted: boolean
+  voiceId: string
+  sceneAudios: SceneAudio[]
+  isGenerating: boolean
+  generationProgress: number  // 0-100
 }

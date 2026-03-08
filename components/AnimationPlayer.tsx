@@ -2,6 +2,7 @@
 
 import { useProjectStore } from '@/stores/project-store'
 import { usePlayback } from '@/hooks/usePlayback'
+import { useAudioPlayback } from '@/hooks/useAudioPlayback'
 import { SceneRenderer } from './SceneRenderer'
 import { getTransition } from '@/lib/video'
 import { clamp } from '@/lib/video'
@@ -10,6 +11,7 @@ import { getEffectiveSceneDuration } from '@/lib/scene-utils'
 export function AnimationPlayer() {
   const { animationConfig, playback } = useProjectStore()
   usePlayback()
+  useAudioPlayback()
 
   if (!animationConfig) return null
 

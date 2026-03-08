@@ -1,5 +1,5 @@
 import React from 'react'
-import { useCurrentFrame, useVideoConfig } from 'remotion'
+import { useCurrentFrame, useVideoConfig, Sequence, Audio } from 'remotion'
 import { SceneRenderer } from '@/components/SceneRenderer'
 import { getTransition, clamp } from '@/lib/video'
 import { getEffectiveSceneDuration } from '@/lib/scene-utils'
@@ -7,6 +7,7 @@ import type { AnimationConfig } from '@/types'
 
 export type RemotionCompositionProps = {
   animationConfig: AnimationConfig
+  sceneAudioUrls?: Record<string, string>  // sceneId → file path for narration audio
   // These are passed as inputProps for calculateMetadata but not used directly by the component
   fps: number
   width: number
@@ -23,6 +24,7 @@ export type RemotionCompositionProps = {
  */
 export const RemotionComposition: React.FC<RemotionCompositionProps> = ({
   animationConfig,
+  sceneAudioUrls,
 }) => {
   const frame = useCurrentFrame()
   const { fps } = useVideoConfig()
@@ -148,6 +150,30 @@ export const RemotionComposition: React.FC<RemotionCompositionProps> = ({
           </div>
         )
       })}
+
+      {/* Render narration audio tracks for each scene */}
+      {sceneAudioUrls && (() => {
+        let audioElapsed = 0
+        return scenes.map((scene) => {
+          const startFrame = Math.round((audioElapsed / 1000) * fps)
+          const effectiveDuration = getEffectiveSceneDuration(scene)
+          const durationInFrames = Math.ceil((effectiveDuration / 1000) * fps)
+          audioElapsed += effectiveDuration
+
+          const audioUrl = sceneAudioUrls[scene.id]
+          if (!audioUrl) return null
+
+          return (
+            <Sequence
+              key={`audio-${scene.id}`}
+              from={startFrame}
+              durationInFrames={durationInFrames}
+            >
+              <Audio src={audioUrl} />
+            </Sequence>
+          )
+        })
+      })()}
     </div>
   )
 }

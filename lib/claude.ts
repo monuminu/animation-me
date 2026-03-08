@@ -117,6 +117,23 @@ Each scene can include an optional \`"delay"\` property (in milliseconds, defaul
 - **Stats / data scenes**: 800–1200ms so viewers can absorb the numbers
 - **Transitions happen AFTER the delay** — the delay extends the scene's visible time, then the transition begins
 - **totalDuration** must include all delays: sum of (duration + delay) for every scene
+
+## Scene Narration (Voiceover)
+
+Each scene can include an optional \`"narration"\` property — a short voiceover script that will be converted to speech via TTS and played during the scene.
+
+\`\`\`
+"narration": "Building great products shouldn't mean wrestling with infrastructure."
+\`\`\`
+
+### Narration Guidelines
+
+- **1–3 sentences** per scene, targeting ~2.5 words per second of scene duration
+- **Complement on-screen text** — don't just repeat the headline; add context, explain why
+- **Skip narration** on LogoRevealScene, TestimonialScene, and CodeBlockScene
+- **Active voice, present tense, conversational tone**
+- **Bridge between scenes** — each narration should flow naturally from the previous one
+- Narration audio may auto-extend the scene delay if the audio is longer than the scene duration
 `
 
 function buildSystemPrompt(): string {
@@ -128,6 +145,7 @@ function buildSystemPrompt(): string {
     'color-palette',
     'transitions',
     'visual-analysis',
+    'narration',
   ])
 
   return `You are the animation engine for animation.me — a text-to-animation platform. Your job is to convert natural language descriptions into structured animation configs.
@@ -156,6 +174,7 @@ The JSON config format:
       "template": "TemplateName",
       "duration": 4000,
       "delay": 500,
+      "narration": "Voiceover script for this scene.",
       "data": { ... },
       "transition": { "type": "fade", "duration": 400 }
     }
@@ -163,7 +182,7 @@ The JSON config format:
 }
 \`\`\`
 
-**Note:** The "transition" on each scene controls how it transitions to the NEXT scene. The first scene typically has no transition. The "delay" is an optional pause (in ms) after the scene content finishes and before the transition/next scene begins. See the sections below for details.
+**Note:** The "transition" on each scene controls how it transitions to the NEXT scene. The first scene typically has no transition. The "delay" is an optional pause (in ms) after the scene content finishes and before the transition/next scene begins. The "narration" is an optional voiceover script that will be converted to speech. See the sections below for details.
 
 ${TEMPLATE_SCHEMAS}
 
@@ -179,6 +198,7 @@ ${TEMPLATE_SCHEMAS}
 8. **Color consistency** — use the same color palette across all scenes
 9. **Content quality** — write compelling, realistic copy for headlines and descriptions
 10. **3-7 scenes** is the sweet spot for most animations
+11. **Narration** — include a \`narration\` field on most scenes with a short voiceover script (~2.5 words/sec). Skip narration on LogoRevealScene, TestimonialScene, and CodeBlockScene. Write conversationally, complement the on-screen text rather than repeating it.
 
 ## Iteration
 

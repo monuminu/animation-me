@@ -36,12 +36,14 @@ function qualityToBitrate(quality: 'low' | 'medium' | 'high'): string {
 
 export async function POST(request: NextRequest) {
   let outputPath: string | null = null
+  let audioFilePaths: string[] = []
 
   try {
     const body = await request.json()
-    const { animationConfig, exportConfig } = body as {
+    const { animationConfig, exportConfig, sceneAudioUrls } = body as {
       animationConfig: AnimationConfig
       exportConfig: ExportConfig
+      sceneAudioUrls?: Record<string, string>
     }
 
     // Validate inputs
@@ -75,11 +77,17 @@ export async function POST(request: NextRequest) {
     }
 
     // ── Step 2: Select composition with inputProps ──
-    const inputProps = {
+    const inputProps: Record<string, unknown> = {
       animationConfig,
       fps: exportConfig.fps,
       width: exportConfig.width,
       height: exportConfig.height,
+    }
+
+    // Include narration audio file paths if available
+    if (sceneAudioUrls && Object.keys(sceneAudioUrls).length > 0) {
+      inputProps.sceneAudioUrls = sceneAudioUrls
+      audioFilePaths = Object.values(sceneAudioUrls)
     }
 
     const composition = await selectComposition({
@@ -133,6 +141,16 @@ export async function POST(request: NextRequest) {
       // Non-critical — temp dir will clean up eventually
     }
 
+    // Clean up temp narration audio files
+    for (const audioPath of audioFilePaths) {
+      try {
+        fs.unlinkSync(audioPath)
+      } catch {
+        // Non-critical
+      }
+    }
+    audioFilePaths = []
+
     const sanitizedTitle = (animationConfig.title || 'animation')
       .replace(/[^a-zA-Z0-9\s\-_]/g, '')
       .replace(/\s+/g, '_')
@@ -153,6 +171,15 @@ export async function POST(request: NextRequest) {
     if (outputPath) {
       try {
         fs.unlinkSync(outputPath)
+      } catch {
+        // Ignore cleanup errors
+      }
+    }
+
+    // Clean up temp narration audio files on error
+    for (const audioPath of audioFilePaths) {
+      try {
+        fs.unlinkSync(audioPath)
       } catch {
         // Ignore cleanup errors
       }
