@@ -24,31 +24,37 @@ export const authOptions: NextAuthOptions = {
           return null
         }
 
-        // Hardcoded password for dev
-        if (credentials.password !== 'dev') {
+        const email = credentials.email.toLowerCase().trim()
+        const inputPassword = credentials.password.trim()
+        const devPassword = (process.env.DEV_AUTH_PASSWORD ?? 'dev').trim()
+
+        if (!email || !inputPassword || inputPassword !== devPassword) {
           return null
         }
 
-        const email = credentials.email.toLowerCase().trim()
-
-        // Find or create user by email
-        let user = await prisma.user.findUnique({
-          where: { email },
-        })
-
-        if (!user) {
-          user = await prisma.user.create({
-            data: {
-              email,
-              name: email.split('@')[0],
-            },
+        try {
+          // Find or create user by email
+          let user = await prisma.user.findUnique({
+            where: { email },
           })
-        }
 
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
+          if (!user) {
+            user = await prisma.user.create({
+              data: {
+                email,
+                name: email.split('@')[0],
+              },
+            })
+          }
+
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+          }
+        } catch (error) {
+          console.error('Credentials authorize failed:', error)
+          return null
         }
       },
     }),

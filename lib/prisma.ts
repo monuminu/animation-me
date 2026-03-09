@@ -7,7 +7,18 @@ const globalForPrisma = globalThis as unknown as {
 
 function createPrismaClient() {
   const connectionString = process.env.DATABASE_URL!
-  const adapter = new PrismaPg({ connectionString })
+
+  // PrismaPg reads target schema from adapter options, not only from URL params.
+  const schemaFromUrl = (() => {
+    try {
+      return new URL(connectionString).searchParams.get('schema')?.trim()
+    } catch {
+      return undefined
+    }
+  })()
+
+  const schema = process.env.DATABASE_SCHEMA?.trim() || schemaFromUrl
+  const adapter = new PrismaPg({ connectionString }, schema ? { schema } : undefined)
   return new PrismaClient({ adapter })
 }
 

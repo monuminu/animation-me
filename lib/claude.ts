@@ -210,9 +210,9 @@ export async function* streamAnimation(
   const stream = anthropic.messages.stream({
     model: process.env.ANTHROPIC_FOUNDRY_DEPLOYMENT || 'claude-sonnet-4-6',
     max_tokens: 32000,
-    thinking: {
-        "type": "adaptive"
-    },
+    // thinking: {
+    //     "type": "adaptive"
+    // },
     system: systemPrompt,
     messages 
   })
