@@ -1,9 +1,9 @@
 export interface Scene {
   id: string
   template: string
-  duration: number
+  duration?: number          // Set by TTS pass; absent until audio is measured
   delay?: number  // ms pause after scene, before next scene/transition
-  narration?: string  // Voiceover script text for TTS
+  narration: string  // Voiceover script text for TTS (required — every scene has narration)
   data: Record<string, unknown>
   transition?: TransitionConfig
 }
@@ -170,10 +170,13 @@ export interface ExportProgress {
   error?: string
 }
 
+export type TTSPhase = 'idle' | 'generating' | 'measuring' | 'finalizing' | 'ready' | 'error'
+
 export interface SceneAudio {
   sceneId: string
   audioUrl: string       // Blob URL (preview) or file path (export)
   audioDuration: number  // ms, measured from actual audio
+  filePath?: string      // Server-side file path for the saved MP3
   status: 'pending' | 'generating' | 'ready' | 'error'
   error?: string
 }
@@ -185,4 +188,6 @@ export interface NarrationState {
   sceneAudios: SceneAudio[]
   isGenerating: boolean
   generationProgress: number  // 0-100
+  ttsPhase: TTSPhase
+  paddingMs: number
 }

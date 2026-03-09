@@ -23,23 +23,46 @@ export async function POST(req: NextRequest) {
     const encoder = new TextEncoder()
     const stream = new ReadableStream({
       async start(controller) {
+        let closed = false
+
+        function safeEnqueue(data: Uint8Array) {
+          if (!closed) {
+            try {
+              controller.enqueue(data)
+            } catch {
+              closed = true
+            }
+          }
+        }
+
+        function safeClose() {
+          if (!closed) {
+            closed = true
+            try {
+              controller.close()
+            } catch {
+              // Already closed
+            }
+          }
+        }
+
         try {
           for await (const chunk of streamAnimation(prompt, messages)) {
             const data = JSON.stringify(chunk)
-            controller.enqueue(encoder.encode(`data: ${data}\n\n`))
+            safeEnqueue(encoder.encode(`data: ${data}\n\n`))
           }
 
-          controller.enqueue(encoder.encode('data: [DONE]\n\n'))
-          controller.close()
+          safeEnqueue(encoder.encode('data: [DONE]\n\n'))
+          safeClose()
         } catch (error) {
           console.error('Stream error:', error)
           const errorData = JSON.stringify({
             type: 'text',
             content: '\n\nSorry, there was an error generating your animation. Please try again.',
           })
-          controller.enqueue(encoder.encode(`data: ${errorData}\n\n`))
-          controller.enqueue(encoder.encode('data: [DONE]\n\n'))
-          controller.close()
+          safeEnqueue(encoder.encode(`data: ${errorData}\n\n`))
+          safeEnqueue(encoder.encode('data: [DONE]\n\n'))
+          safeClose()
         }
       },
     })

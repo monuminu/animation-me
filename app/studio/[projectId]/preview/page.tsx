@@ -13,7 +13,7 @@ import {
   Minimize,
 } from 'lucide-react'
 import { useProjectStore } from '@/stores/project-store'
-import { usePlayback } from '@/hooks/usePlayback'
+import { useSeekTo } from '@/hooks/usePlayback'
 import { AnimationPlayer } from '@/components/AnimationPlayer'
 import { formatTime, cn } from '@/lib/utils'
 import { getPresetById } from '@/lib/canvas-presets'
@@ -32,7 +32,7 @@ export default function PreviewPage() {
     projectTitle,
   } = useProjectStore()
 
-  const { seekTo } = usePlayback()
+  const { seekTo } = useSeekTo()
   const controlsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [showControls, setShowControls] = useState(true)
   const containerRef = useRef<HTMLDivElement>(null)

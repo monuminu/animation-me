@@ -3,6 +3,7 @@
 import { useRef, useState, useEffect, useCallback } from 'react'
 import { useProjectStore } from '@/stores/project-store'
 import { PlaybackControls } from './PlaybackControls'
+import { SceneTimeline } from './SceneTimeline'
 import { AnimationPlayer } from '@/components/AnimationPlayer'
 import { Clapperboard, ChevronDown, Check, Monitor, Smartphone } from 'lucide-react'
 import { CANVAS_PRESETS, PRESET_CATEGORIES, getPresetById } from '@/lib/canvas-presets'
@@ -146,6 +147,9 @@ export function PreviewPanel() {
           )}
         </div>
       </div>
+
+      {/* Scene Timeline */}
+      {animationConfig && <SceneTimeline />}
 
       {/* Playback Controls */}
       <PlaybackControls />

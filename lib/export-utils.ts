@@ -1,5 +1,5 @@
 import type { Scene } from '@/types'
-import { getEffectiveSceneDuration } from '@/lib/scene-utils'
+import { getEffectiveSceneDuration, getResolvedDuration } from '@/lib/scene-utils'
 
 /**
  * Given an array of scenes and a time in milliseconds,
@@ -17,7 +17,7 @@ export function getSceneAtTime(
     const effectiveDuration = getEffectiveSceneDuration(scenes[i])
     if (timeMs < elapsed + effectiveDuration) {
       const sceneTime = timeMs - elapsed
-      const contentDuration = scenes[i].duration
+      const contentDuration = getResolvedDuration(scenes[i])
       // During delay phase, freeze progress at 1
       const progress = sceneTime >= contentDuration
         ? 1

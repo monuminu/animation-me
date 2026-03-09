@@ -1,11 +1,19 @@
 import type { Scene } from '@/types'
 
 /**
+ * Resolve the content duration of a scene.
+ * Returns TTS-set duration, or 5000ms as a fallback if TTS hasn't run yet.
+ */
+export function getResolvedDuration(scene: Scene): number {
+  return scene.duration ?? 5000
+}
+
+/**
  * Get the effective duration of a scene including its delay.
  * The delay is a pause after the scene content finishes, before the next scene starts.
  */
 export function getEffectiveSceneDuration(scene: Scene): number {
-  return scene.duration + (scene.delay ?? 0)
+  return getResolvedDuration(scene) + (scene.delay ?? 0)
 }
 
 /**
@@ -13,6 +21,13 @@ export function getEffectiveSceneDuration(scene: Scene): number {
  */
 export function computeTotalDuration(scenes: Scene[]): number {
   return scenes.reduce((sum, scene) => sum + getEffectiveSceneDuration(scene), 0)
+}
+
+/**
+ * Check whether all scenes have their final duration set by TTS.
+ */
+export function allDurationsResolved(scenes: Scene[]): boolean {
+  return scenes.every((scene) => scene.duration !== undefined)
 }
 
 /**
@@ -37,7 +52,7 @@ export function getSceneAtTime(
     const effectiveDuration = getEffectiveSceneDuration(scenes[i])
     if (timeMs < elapsed + effectiveDuration) {
       const sceneTime = timeMs - elapsed
-      const contentDuration = scenes[i].duration
+      const contentDuration = getResolvedDuration(scenes[i])
       const isInDelay = sceneTime >= contentDuration
       // During delay, progress is frozen at 1 (last frame)
       const progress = isInDelay

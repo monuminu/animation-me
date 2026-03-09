@@ -2,7 +2,7 @@ import React from 'react'
 import { useCurrentFrame, useVideoConfig, Sequence, Audio } from 'remotion'
 import { SceneRenderer } from '@/components/SceneRenderer'
 import { getTransition, clamp } from '@/lib/video'
-import { getEffectiveSceneDuration } from '@/lib/scene-utils'
+import { getEffectiveSceneDuration, getResolvedDuration } from '@/lib/scene-utils'
 import type { AnimationConfig } from '@/types'
 
 export type RemotionCompositionProps = {
@@ -52,7 +52,7 @@ export const RemotionComposition: React.FC<RemotionCompositionProps> = ({
   // Calculate progress within current scene
   const sceneTime = currentTime - elapsed
   const currentScene = scenes[currentSceneIndex]
-  const contentDuration = currentScene?.duration ?? 0
+  const contentDuration = currentScene ? getResolvedDuration(currentScene) : 0
   const sceneDelay = currentScene?.delay ?? 0
 
   // During delay phase, freeze progress at 1 (last frame stays visible)

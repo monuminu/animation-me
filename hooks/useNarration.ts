@@ -5,49 +5,33 @@ import { useProjectStore } from '@/stores/project-store'
 import { computeTotalDuration } from '@/lib/scene-utils'
 import type { AnimationConfig, SceneAudio } from '@/types'
 
-/**
- * Measure the duration of an audio blob URL in milliseconds.
- */
-function measureAudioDuration(blobUrl: string): Promise<number> {
-  return new Promise((resolve, reject) => {
-    const audio = new Audio()
-    audio.preload = 'metadata'
-
-    audio.onloadedmetadata = () => {
-      const durationMs = audio.duration * 1000
-      resolve(durationMs)
-    }
-
-    audio.onerror = () => {
-      reject(new Error('Failed to load audio metadata'))
-    }
-
-    audio.src = blobUrl
-  })
+interface BatchTTSResult {
+  sceneId: string
+  filePath: string
+  durationMs: number
+  audioUrl: string
+  status: 'success' | 'error'
+  error?: string
 }
 
 /**
- * useNarration — Orchestrates TTS generation for all scenes with narration text.
+ * useNarration — Orchestrates TTS generation for all scenes.
  *
- * Generates audio sequentially (one scene at a time) to avoid ElevenLabs 409
- * "already_running" conflicts. Measures durations and extends scene delays
- * when audio is longer than the scene's visual duration + existing delay.
+ * Every scene has narration. The flow:
+ * 1. Calls POST /api/tts/generate-all with all scenes
+ * 2. Receives audio durations from the server
+ * 3. Sets scene.duration = audioDurationMs + paddingMs
+ * 4. Sets delay = 0 on all scenes (padding is baked into duration)
+ * 5. Computes totalDuration
+ * 6. Returns finalized AnimationConfig
  */
 export function useNarration() {
   const abortControllerRef = useRef<AbortController | null>(null)
 
   const generateNarration = useCallback(
-    async (config: AnimationConfig): Promise<AnimationConfig> => {
+    async (config: AnimationConfig, projectId: string): Promise<AnimationConfig> => {
       const store = useProjectStore.getState()
-
-      // Find scenes that have narration text
-      const scenesWithNarration = config.scenes.filter(
-        (s) => s.narration && s.narration.trim().length > 0
-      )
-
-      if (scenesWithNarration.length === 0) {
-        return config
-      }
+      const paddingMs = store.narration.paddingMs
 
       // Cancel any in-progress generation
       if (abortControllerRef.current) {
@@ -59,105 +43,116 @@ export function useNarration() {
 
       store.setNarrationGenerating(true)
       store.setNarrationProgress(0)
+      store.setTTSPhase('generating')
 
       // Initialize pending state for each scene
-      for (const scene of scenesWithNarration) {
+      for (const scene of config.scenes) {
         store.setSceneAudio(scene.id, { status: 'pending' })
       }
 
-      let completedCount = 0
-      const sceneAudioResults: Map<string, { blobUrl: string; durationMs: number }> =
-        new Map()
+      try {
+        // Call the batch TTS endpoint with all scenes
+        const response = await fetch('/api/tts/generate-all', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            projectId,
+            voiceId: store.narration.voiceId || undefined,
+            scenes: config.scenes.map((s) => ({
+              id: s.id,
+              narration: s.narration,
+            })),
+          }),
+          signal: abortController.signal,
+        })
 
-      // Generate TTS sequentially to avoid ElevenLabs 409 "already_running" conflicts.
-      // The API rejects concurrent requests for the same voice, so we serialize them.
-      for (const scene of scenesWithNarration) {
-        if (abortController.signal.aborted) break
-
-        store.setSceneAudio(scene.id, { status: 'generating' })
-
-        try {
-          const response = await fetch('/api/tts', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              text: scene.narration,
-              voiceId: store.narration.voiceId || undefined,
-            }),
-            signal: abortController.signal,
-          })
-
-          if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}))
-            throw new Error(errorData.error || `TTS failed with status ${response.status}`)
-          }
-
-          const audioBlob = await response.blob()
-          const blobUrl = URL.createObjectURL(audioBlob)
-
-          // Measure actual audio duration
-          const durationMs = await measureAudioDuration(blobUrl)
-
-          sceneAudioResults.set(scene.id, { blobUrl, durationMs })
-
-          store.setSceneAudio(scene.id, {
-            audioUrl: blobUrl,
-            audioDuration: durationMs,
-            status: 'ready',
-          })
-        } catch (error) {
-          if ((error as Error).name === 'AbortError') break
-
-          console.error(`TTS error for scene ${scene.id}:`, error)
-          store.setSceneAudio(scene.id, {
-            status: 'error',
-            error: error instanceof Error ? error.message : 'TTS generation failed',
-          })
-        } finally {
-          completedCount++
-          const progress = Math.round(
-            (completedCount / scenesWithNarration.length) * 100
-          )
-          store.setNarrationProgress(progress)
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}))
+          throw new Error(errorData.error || `Batch TTS failed with status ${response.status}`)
         }
-      }
 
-      if (abortController.signal.aborted) {
-        store.setNarrationGenerating(false)
-        return config
-      }
+        const { results } = (await response.json()) as { results: BatchTTSResult[] }
 
-      // Adjust scene delays where audio exceeds visual duration
-      const PADDING_MS = 500 // breathing room after audio
-      const adjustedScenes = config.scenes.map((scene) => {
-        const audioResult = sceneAudioResults.get(scene.id)
-        if (!audioResult) return scene
+        if (abortController.signal.aborted) {
+          store.setNarrationGenerating(false)
+          store.setTTSPhase('idle')
+          return fallbackConfig(config)
+        }
 
-        const visualWindow = scene.duration + (scene.delay ?? 0)
-        const neededDuration = audioResult.durationMs + PADDING_MS
+        store.setTTSPhase('measuring')
 
-        if (neededDuration > visualWindow) {
-          // Extend the delay (not the animation duration) to accommodate audio
-          const extraTime = neededDuration - visualWindow
+        // Build duration map from server response
+        const durationMap = new Map<string, { durationMs: number; audioUrl: string; filePath: string }>()
+        for (const result of results) {
+          if (result.status === 'success') {
+            durationMap.set(result.sceneId, {
+              durationMs: result.durationMs,
+              audioUrl: result.audioUrl,
+              filePath: result.filePath,
+            })
+            store.setSceneAudio(result.sceneId, {
+              audioUrl: result.audioUrl,
+              audioDuration: result.durationMs,
+              filePath: result.filePath,
+              status: 'ready',
+            })
+          } else {
+            store.setSceneAudio(result.sceneId, {
+              status: 'error',
+              error: result.error || 'TTS generation failed',
+            })
+          }
+        }
+
+        store.setNarrationProgress(100)
+        store.setTTSPhase('finalizing')
+
+        // Set duration on all scenes from TTS audio length
+        const finalScenes = config.scenes.map((scene) => {
+          const audioResult = durationMap.get(scene.id)
+          if (audioResult) {
+            return {
+              ...scene,
+              duration: audioResult.durationMs + paddingMs,
+              delay: 0,
+            }
+          }
+          // TTS failed for this scene — use fallback
           return {
             ...scene,
-            delay: (scene.delay ?? 0) + extraTime,
+            duration: 5000,
+            delay: 0,
           }
+        })
+
+        const totalDuration = computeTotalDuration(finalScenes)
+
+        const finalConfig: AnimationConfig = {
+          ...config,
+          scenes: finalScenes,
+          totalDuration,
         }
 
-        return scene
-      })
+        store.setNarrationGenerating(false)
+        store.setTTSPhase('ready')
+        abortControllerRef.current = null
 
-      const adjustedConfig: AnimationConfig = {
-        ...config,
-        scenes: adjustedScenes,
-        totalDuration: computeTotalDuration(adjustedScenes),
+        return finalConfig
+      } catch (error) {
+        if ((error as Error).name === 'AbortError') {
+          store.setNarrationGenerating(false)
+          store.setTTSPhase('idle')
+          return fallbackConfig(config)
+        }
+
+        console.error('Batch TTS generation failed:', error)
+        store.setNarrationGenerating(false)
+        store.setTTSPhase('error')
+        abortControllerRef.current = null
+
+        // Fallback: use 5000ms for all scenes
+        return fallbackConfig(config)
       }
-
-      store.setNarrationGenerating(false)
-      abortControllerRef.current = null
-
-      return adjustedConfig
     },
     []
   )
@@ -169,7 +164,24 @@ export function useNarration() {
     }
     const store = useProjectStore.getState()
     store.setNarrationGenerating(false)
+    store.setTTSPhase('idle')
   }, [])
 
   return { generateNarration, cancelNarration }
+}
+
+/**
+ * Fallback: assign 5000ms to all scenes when TTS fails or is aborted.
+ */
+function fallbackConfig(config: AnimationConfig): AnimationConfig {
+  const fallbackScenes = config.scenes.map((scene) => ({
+    ...scene,
+    duration: 5000,
+    delay: 0,
+  }))
+  return {
+    ...config,
+    scenes: fallbackScenes,
+    totalDuration: computeTotalDuration(fallbackScenes),
+  }
 }

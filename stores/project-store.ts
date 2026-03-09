@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { AnimationConfig, ChatMessage, PlaybackState, FileTreeNode, CanvasPreset, RecordingState, ExportProgress, NarrationState, SceneAudio } from '@/types'
+import type { AnimationConfig, ChatMessage, PlaybackState, FileTreeNode, CanvasPreset, RecordingState, ExportProgress, NarrationState, SceneAudio, TTSPhase, TransitionConfig } from '@/types'
 import { computeTotalDuration } from '@/lib/scene-utils'
 
 export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
@@ -51,7 +51,7 @@ interface ProjectStore {
   addMessage: (message: ChatMessage) => void
   updateMessage: (id: string, updates: Partial<ChatMessage>) => void
   setIsGenerating: (generating: boolean) => void
-  setAnimationConfig: (config: AnimationConfig | null) => void
+  setAnimationConfig: (config: AnimationConfig | null, options?: { preserveNarration?: boolean }) => void
   setPlayback: (updates: Partial<PlaybackState>) => void
   togglePlayback: () => void
   setFileTree: (tree: FileTreeNode[]) => void
@@ -69,12 +69,16 @@ interface ProjectStore {
   setIsExporting: (exporting: boolean) => void
   setExportProgress: (progress: ExportProgress | null) => void
   updateSceneDelay: (sceneIndex: number, delay: number) => void
+  updateSceneTransition: (sceneIndex: number, updates: Partial<TransitionConfig>) => void
+  reorderScenes: (fromIndex: number, toIndex: number) => void
   setNarrationMuted: (muted: boolean) => void
   setNarrationGenerating: (generating: boolean) => void
   setNarrationProgress: (progress: number) => void
   setSceneAudio: (sceneId: string, updates: Partial<SceneAudio>) => void
   setAllSceneAudios: (audios: SceneAudio[]) => void
   clearNarration: () => void
+  setTTSPhase: (phase: TTSPhase) => void
+  setNarrationPadding: (paddingMs: number) => void
   setSaveStatus: (status: SaveStatus) => void
   hydrateFromServer: (data: {
     projectId: string
@@ -108,6 +112,8 @@ const initialNarration: NarrationState = {
   sceneAudios: [],
   isGenerating: false,
   generationProgress: 0,
+  ttsPhase: 'idle',
+  paddingMs: 1000,
 }
 
 export const useProjectStore = create<ProjectStore>((set) => ({
@@ -149,9 +155,19 @@ export const useProjectStore = create<ProjectStore>((set) => ({
 
   setIsGenerating: (generating) => set({ isGenerating: generating }),
 
-  setAnimationConfig: (config) =>
+  setAnimationConfig: (config, options) =>
     set((state) => {
-      // Revoke old blob URLs to prevent memory leaks
+      if (options?.preserveNarration) {
+        // Update config and playback without resetting narration state
+        return {
+          animationConfig: config,
+          playback: config
+            ? { ...state.playback, totalDuration: config.totalDuration }
+            : initialPlayback,
+        }
+      }
+
+      // Default behavior: reset narration and revoke old blob URLs
       for (const audio of state.narration.sceneAudios) {
         if (audio.audioUrl && audio.audioUrl.startsWith('blob:')) {
           try { URL.revokeObjectURL(audio.audioUrl) } catch {}
@@ -238,6 +254,56 @@ export const useProjectStore = create<ProjectStore>((set) => ({
       }
     }),
 
+  updateSceneTransition: (sceneIndex, updates) =>
+    set((state) => {
+      if (!state.animationConfig) return state
+      const scenes = state.animationConfig.scenes.map((scene, i) => {
+        if (i !== sceneIndex) return scene
+        const existing = scene.transition ?? { type: 'fade' as const, duration: 300 }
+        return { ...scene, transition: { ...existing, ...updates } }
+      })
+      return {
+        animationConfig: {
+          ...state.animationConfig,
+          scenes,
+        },
+      }
+    }),
+
+  reorderScenes: (fromIndex, toIndex) =>
+    set((state) => {
+      if (!state.animationConfig) return state
+      const scenes = [...state.animationConfig.scenes]
+      const [moved] = scenes.splice(fromIndex, 1)
+      scenes.splice(toIndex, 0, moved)
+      const newTotalDuration = computeTotalDuration(scenes)
+
+      // Also reorder sceneAudios to stay in sync
+      const sceneAudios = [...state.narration.sceneAudios]
+      const newSceneIds = scenes.map(s => s.id)
+      const reorderedAudios = newSceneIds
+        .map(id => sceneAudios.find(a => a.sceneId === id))
+        .filter((a): a is SceneAudio => !!a)
+      // Keep any audios that weren't matched (shouldn't happen, but safe)
+      const unmatchedAudios = sceneAudios.filter(a => !newSceneIds.includes(a.sceneId))
+
+      return {
+        animationConfig: {
+          ...state.animationConfig,
+          scenes,
+          totalDuration: newTotalDuration,
+        },
+        playback: {
+          ...state.playback,
+          totalDuration: newTotalDuration,
+        },
+        narration: {
+          ...state.narration,
+          sceneAudios: [...reorderedAudios, ...unmatchedAudios],
+        },
+      }
+    }),
+
   setNarrationMuted: (muted) =>
     set((state) => ({
       narration: { ...state.narration, muted },
@@ -297,6 +363,16 @@ export const useProjectStore = create<ProjectStore>((set) => ({
       }
       return { narration: initialNarration }
     }),
+
+  setTTSPhase: (phase) =>
+    set((state) => ({
+      narration: { ...state.narration, ttsPhase: phase },
+    })),
+
+  setNarrationPadding: (paddingMs) =>
+    set((state) => ({
+      narration: { ...state.narration, paddingMs },
+    })),
 
   setSaveStatus: (status) => set({ saveStatus: status, lastSavedAt: status === 'saved' ? Date.now() : undefined }),
 

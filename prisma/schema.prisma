@@ -68,9 +68,25 @@ model Project {
   messages        Json     @default("[]")
   canvasPresetId  String   @default("full-size")
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  narrationAudios NarrationAudio[]
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
   @@index([userId])
   @@index([updatedAt])
+}
+
+model NarrationAudio {
+  id         String   @id @default(cuid())
+  projectId  String
+  sceneId    String
+  filePath   String
+  durationMs Int
+  voiceId    String
+  text       String   @db.Text
+  createdAt  DateTime @default(now())
+  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, sceneId])
+  @@index([projectId])
 }

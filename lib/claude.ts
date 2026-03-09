@@ -100,27 +100,9 @@ Each scene can include an optional "transition" property that controls how it tr
 - **Transition duration** should be 10-15% of the shorter scene's duration
 - **Never exceed 800ms** for transitions
 
-## Scene Delay (Pause Between Scenes)
-
-Each scene can include an optional \`"delay"\` property (in milliseconds, default 0) that freezes the last frame of the scene for the specified duration before the transition to the next scene begins.
-
-\`\`\`
-"delay": 500  // 500ms pause showing the last frame before transitioning
-\`\`\`
-
-### Delay Best Practices
-
-- **Default to 0ms** — most scenes flow directly into transitions without a pause
-- **500–1500ms** works well for text-heavy scenes where the audience needs reading time
-- **CTA / final scenes**: 1000–2000ms delay lets the call-to-action linger
-- **Fast intros / logo reveals**: 0ms delay — keep the energy high
-- **Stats / data scenes**: 800–1200ms so viewers can absorb the numbers
-- **Transitions happen AFTER the delay** — the delay extends the scene's visible time, then the transition begins
-- **totalDuration** must include all delays: sum of (duration + delay) for every scene
-
 ## Scene Narration (Voiceover)
 
-Each scene can include an optional \`"narration"\` property — a short voiceover script that will be converted to speech via TTS and played during the scene.
+Every scene MUST include a \`"narration"\` property — a short voiceover script that will be converted to speech via TTS and played during the scene. The scene's duration is determined entirely by the narration audio length.
 
 \`\`\`
 "narration": "Building great products shouldn't mean wrestling with infrastructure."
@@ -128,12 +110,12 @@ Each scene can include an optional \`"narration"\` property — a short voiceove
 
 ### Narration Guidelines
 
-- **1–3 sentences** per scene, targeting ~2.5 words per second of scene duration
+- **Every scene MUST have narration** — including LogoRevealScene, TestimonialScene, CodeBlockScene, and the intro scene. No exceptions.
+- **1–3 sentences** per scene — write narration naturally; scene timing is derived from audio length automatically
 - **Complement on-screen text** — don't just repeat the headline; add context, explain why
-- **Skip narration** on LogoRevealScene, TestimonialScene, and CodeBlockScene
 - **Active voice, present tense, conversational tone**
 - **Bridge between scenes** — each narration should flow naturally from the previous one
-- Narration audio may auto-extend the scene delay if the audio is longer than the scene duration
+- Write narration that feels complete and well-paced — the system will measure the TTS audio and set scene duration to match
 `
 
 function buildSystemPrompt(): string {
@@ -167,13 +149,10 @@ The JSON config format:
 \`\`\`json
 {
   "title": "Animation Title",
-  "totalDuration": 20000,
   "scenes": [
     {
       "id": "unique-scene-id",
       "template": "TemplateName",
-      "duration": 4000,
-      "delay": 500,
       "narration": "Voiceover script for this scene.",
       "data": { ... },
       "transition": { "type": "fade", "duration": 400 }
@@ -182,7 +161,7 @@ The JSON config format:
 }
 \`\`\`
 
-**Note:** The "transition" on each scene controls how it transitions to the NEXT scene. The first scene typically has no transition. The "delay" is an optional pause (in ms) after the scene content finishes and before the transition/next scene begins. The "narration" is an optional voiceover script that will be converted to speech. See the sections below for details.
+**Note:** The "transition" on each scene controls how it transitions to the NEXT scene. The first scene typically has no transition. Every scene MUST have a "narration" field — the system converts it to TTS audio and sets the scene duration to match the audio length. Do NOT include "duration", "delay", or "totalDuration" — those are computed by the system after TTS generation. See the sections below for details.
 
 ${TEMPLATE_SCHEMAS}
 
@@ -192,13 +171,11 @@ ${TEMPLATE_SCHEMAS}
 2. **Use variety** — don't repeat the same template twice in a row unless it makes sense
 3. **Cinematic pacing** — start with a strong intro (LogoRevealScene or TextRevealScene), build through features/content, end with a CTA or tagline
 4. **Dark by default** — use dark backgrounds (#0d1117, #0f172a, #1a1a2e) with vibrant accent colors
-5. **Realistic durations** — short videos: 15-25s, standard: 30-50s, detailed: 50-80s
-6. **Scene durations**: intro 5-7s, content scenes 6-9s, CTA 5-6s
-7. **totalDuration** MUST equal the sum of all (duration + delay) values for every scene
-8. **Color consistency** — use the same color palette across all scenes
-9. **Content quality** — write compelling, realistic copy for headlines and descriptions
-10. **3-7 scenes** is the sweet spot for most animations
-11. **Narration** — include a \`narration\` field on most scenes with a short voiceover script (~2.5 words/sec). Skip narration on LogoRevealScene, TestimonialScene, and CodeBlockScene. Write conversationally, complement the on-screen text rather than repeating it.
+5. **Do NOT output** \`duration\`, \`delay\`, \`defaultDuration\`, or \`totalDuration\` — those are system-computed after TTS generation
+6. **Color consistency** — use the same color palette across all scenes
+7. **Content quality** — write compelling, realistic copy for headlines and descriptions
+8. **3-7 scenes** is the sweet spot for most animations
+9. **Narration is REQUIRED** — every scene MUST include a \`narration\` field with a voiceover script. No scene should be without narration. Write naturally and conversationally, complement the on-screen text rather than repeating it. The system measures the TTS audio and sets each scene's duration to match.
 
 ## Iteration
 

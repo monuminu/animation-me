@@ -1,5 +1,4 @@
 import type { AnimationConfig, TransitionConfig } from '@/types'
-import { computeTotalDuration } from '@/lib/scene-utils'
 
 /**
  * Parse Claude's response to extract description text and animation config JSON
@@ -58,17 +57,16 @@ function validateConfig(raw: Record<string, unknown>): AnimationConfig {
   const scenes = (raw.scenes as Array<Record<string, unknown>>).map((scene, index) => ({
     id: (scene.id as string) || `scene-${index}`,
     template: (scene.template as string) || 'TextRevealScene',
-    duration: (scene.duration as number) || 6000,
-    delay: (scene.delay as number) || 0,
+    // Do NOT set `duration` — TTS pass will set it from audio length
+    narration: (scene.narration as string) || '',
     data: (scene.data as Record<string, unknown>) || {},
     transition: scene.transition as TransitionConfig | undefined,
   }))
 
-  const totalDuration = (raw.totalDuration as number) || computeTotalDuration(scenes)
-
+  // totalDuration will be computed after TTS; set 0 as placeholder
   return {
     title: (raw.title as string) || 'Untitled Animation',
-    totalDuration,
+    totalDuration: 0,
     scenes,
     metadata: {
       prompt: '',

@@ -4,11 +4,13 @@ import { useCallback } from 'react'
 import { useProjectStore } from '@/stores/project-store'
 import { generateId } from '@/lib/utils'
 import { useNarration } from '@/hooks/useNarration'
-import type { ChatMessage, AnimationConfig, FileTreeNode } from '@/types'
+import { getResolvedDuration } from '@/lib/scene-utils'
+import type { ChatMessage, AnimationConfig, FileTreeNode, Scene } from '@/types'
 
 export function useAnimate() {
   const {
     messages,
+    projectId,
     addMessage,
     updateMessage,
     setIsGenerating,
@@ -16,6 +18,7 @@ export function useAnimate() {
     setProjectTitle,
     setFileTree,
     setPlayback,
+    setTTSPhase,
   } = useProjectStore()
 
   const { generateNarration } = useNarration()
@@ -95,92 +98,50 @@ export function useAnimate() {
         }
       }
 
-      // Process the animation config
-      if (animConfig) {
-        setAnimationConfig(animConfig)
-        setProjectTitle(animConfig.title || 'Untitled Animation')
+      // Normalize the config (handle both old and new format)
+      const rawConfig = animConfig || extractConfigFromText(fullContent)
+
+      if (rawConfig) {
+        // Set project title and file tree immediately (visible during TTS phase)
+        setProjectTitle(rawConfig.title || 'Untitled Animation')
+        const tree = buildFileTree(rawConfig)
+        setFileTree(tree)
+
         updateMessage(assistantId, {
           content: fullContent,
-          animationConfig: animConfig,
+          animationConfig: rawConfig,
           isStreaming: false,
         })
 
-        // Build file tree from config
-        const tree = buildFileTree(animConfig)
-        setFileTree(tree)
+        // DO NOT start playback yet — wait for TTS
+        setTTSPhase('generating')
 
-        // Start playback immediately (narration will catch up)
+        // Get the current project ID
+        const currentProjectId = projectId || generateId()
+
+        // BLOCKING: Generate ALL TTS and get finalized config with durations
+        const finalConfig = await generateNarration(rawConfig, currentProjectId)
+
+        // Now set the config with TTS-derived durations (preserve narration state)
+        setAnimationConfig(finalConfig, { preserveNarration: true })
+
+        // Update the message with the finalized config
+        updateMessage(assistantId, {
+          animationConfig: finalConfig,
+        })
+
+        // Update file tree with finalized durations
+        setFileTree(buildFileTree(finalConfig))
+
+        // NOW start playback
         setPlayback({
           isPlaying: true,
           currentTime: 0,
-          totalDuration: animConfig.totalDuration,
+          totalDuration: finalConfig.totalDuration,
           currentSceneIndex: 0,
         })
-
-        // Generate narration audio in the background (non-blocking)
-        // When TTS completes, update config with extended durations if needed
-        generateNarration(animConfig).then((adjustedConfig) => {
-          if (adjustedConfig !== animConfig) {
-            const store = useProjectStore.getState()
-            // Only update durations — don't reset playback position
-            const currentPlayback = store.playback
-            store.setPlayback({
-              totalDuration: adjustedConfig.totalDuration,
-            })
-            // Update the config without triggering a full reset
-            // We directly update animationConfig without calling setAnimationConfig
-            // to avoid clearing the narration state we just built
-            useProjectStore.setState({
-              animationConfig: adjustedConfig,
-              playback: {
-                ...currentPlayback,
-                totalDuration: adjustedConfig.totalDuration,
-              },
-            })
-          }
-        }).catch((err) => {
-          console.error('Narration generation failed:', err)
-          // Non-fatal — animation continues without audio
-        })
       } else {
-        // Try to parse config from the response text
-        const extracted = extractConfigFromText(fullContent)
-        if (extracted) {
-          setAnimationConfig(extracted)
-          setProjectTitle(extracted.title || 'Untitled Animation')
-          updateMessage(assistantId, {
-            content: fullContent,
-            animationConfig: extracted,
-            isStreaming: false,
-          })
-          const tree = buildFileTree(extracted)
-          setFileTree(tree)
-          setPlayback({
-            isPlaying: true,
-            currentTime: 0,
-            totalDuration: extracted.totalDuration,
-            currentSceneIndex: 0,
-          })
-
-          // Generate narration for extracted config too
-          generateNarration(extracted).then((adjustedConfig) => {
-            if (adjustedConfig !== extracted) {
-              const store = useProjectStore.getState()
-              const currentPlayback = store.playback
-              useProjectStore.setState({
-                animationConfig: adjustedConfig,
-                playback: {
-                  ...currentPlayback,
-                  totalDuration: adjustedConfig.totalDuration,
-                },
-              })
-            }
-          }).catch((err) => {
-            console.error('Narration generation failed:', err)
-          })
-        } else {
-          updateMessage(assistantId, { isStreaming: false })
-        }
+        updateMessage(assistantId, { isStreaming: false })
       }
     } catch (error) {
       console.error('Animation generation error:', error)
@@ -188,14 +149,19 @@ export function useAnimate() {
         content: 'Sorry, there was an error generating your animation. Please try again.',
         isStreaming: false,
       })
+      setTTSPhase('error')
     } finally {
       setIsGenerating(false)
     }
-  }, [messages, addMessage, updateMessage, setIsGenerating, setAnimationConfig, setProjectTitle, setFileTree, setPlayback, generateNarration])
+  }, [messages, projectId, addMessage, updateMessage, setIsGenerating, setAnimationConfig, setProjectTitle, setFileTree, setPlayback, setTTSPhase, generateNarration])
 
   return { generate }
 }
 
+/**
+ * Extract animation config from response text.
+ * Strips any LLM-provided duration/delay fields since TTS sets them.
+ */
 function extractConfigFromText(text: string): AnimationConfig | null {
   // Try to find JSON block in the response
   const jsonMatch = text.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/)
@@ -203,12 +169,7 @@ function extractConfigFromText(text: string): AnimationConfig | null {
     try {
       const parsed = JSON.parse(jsonMatch[1])
       if (parsed.scenes && Array.isArray(parsed.scenes)) {
-        // Ensure delay is a valid number on each scene
-        parsed.scenes = parsed.scenes.map((s: Record<string, unknown>) => ({
-          ...s,
-          delay: typeof s.delay === 'number' ? Math.max(0, s.delay) : 0,
-        }))
-        return parsed as AnimationConfig
+        return normalizeConfig(parsed)
       }
     } catch {}
   }
@@ -219,16 +180,36 @@ function extractConfigFromText(text: string): AnimationConfig | null {
     try {
       const parsed = JSON.parse(rawMatch[0])
       if (parsed.scenes && Array.isArray(parsed.scenes)) {
-        parsed.scenes = parsed.scenes.map((s: Record<string, unknown>) => ({
-          ...s,
-          delay: typeof s.delay === 'number' ? Math.max(0, s.delay) : 0,
-        }))
-        return parsed as AnimationConfig
+        return normalizeConfig(parsed)
       }
     } catch {}
   }
 
   return null
+}
+
+/**
+ * Normalize a parsed config.
+ * Strips duration/delay/defaultDuration — TTS pass will set duration.
+ */
+function normalizeConfig(parsed: Record<string, unknown>): AnimationConfig {
+  const scenes = (parsed.scenes as Record<string, unknown>[]).map((s) => {
+    const scene = { ...s } as Record<string, unknown>
+
+    // Clear duration, delay, defaultDuration — TTS pass will set duration
+    delete scene.duration
+    delete scene.defaultDuration
+    scene.delay = 0
+
+    return scene as unknown as Scene
+  })
+
+  return {
+    title: (parsed.title as string) || 'Untitled Animation',
+    totalDuration: 0, // Will be computed after TTS
+    scenes,
+    metadata: parsed.metadata as AnimationConfig['metadata'],
+  }
 }
 
 function buildFileTree(config: AnimationConfig): FileTreeNode[] {
@@ -257,11 +238,11 @@ function buildFileTree(config: AnimationConfig): FileTreeNode[] {
   ]
 }
 
-function generateSceneCode(scene: { id: string; template: string; duration: number; delay?: number; data: Record<string, unknown> }): string {
+function generateSceneCode(scene: Scene): string {
+  const duration = getResolvedDuration(scene)
   return `// Scene: ${scene.id}
 // Template: ${scene.template}
-// Duration: ${scene.duration}ms
-// Delay: ${scene.delay ?? 0}ms
+// Duration: ${duration}ms (set by TTS audio length)
 
 import { motion } from 'framer-motion'
 

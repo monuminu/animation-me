@@ -20,6 +20,7 @@ const defaultAnimationConfig: AnimationConfig = {
       id: 'placeholder',
       template: 'TextRevealScene',
       duration: 3000,
+      narration: 'This is a Remotion preview placeholder.',
       data: {
         heading: 'Preview',
         subheading: 'This is a Remotion preview placeholder',

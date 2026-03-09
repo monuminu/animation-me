@@ -4,6 +4,53 @@ import { useEffect, useRef, useCallback } from 'react'
 import { useProjectStore } from '@/stores/project-store'
 import { getEffectiveSceneDuration } from '@/lib/scene-utils'
 
+/**
+ * Seek to a specific time (ms) in the animation.
+ * Standalone function — does NOT start a rAF loop.
+ * Safe to call from any component.
+ */
+export function seekToTime(time: number) {
+  const state = useProjectStore.getState()
+  const config = state.animationConfig
+  if (!config) return
+
+  const clampedTime = Math.max(0, Math.min(time, config.totalDuration))
+
+  let elapsed = 0
+  let sceneIndex = 0
+  for (let i = 0; i < config.scenes.length; i++) {
+    const effectiveDuration = getEffectiveSceneDuration(config.scenes[i])
+    if (clampedTime < elapsed + effectiveDuration) {
+      sceneIndex = i
+      break
+    }
+    elapsed += effectiveDuration
+    if (i === config.scenes.length - 1) {
+      sceneIndex = i
+    }
+  }
+
+  state.setPlayback({
+    currentTime: clampedTime,
+    currentSceneIndex: sceneIndex,
+  })
+}
+
+/**
+ * Hook wrapper around seekToTime for components that need a stable reference.
+ * Does NOT start a rAF loop — safe to call from any component.
+ */
+export function useSeekTo() {
+  return { seekTo: seekToTime }
+}
+
+/**
+ * usePlayback — requestAnimationFrame playback engine.
+ *
+ * IMPORTANT: Only mount this hook ONCE in the entire component tree
+ * (inside AnimationPlayer). Multiple instances will create competing
+ * rAF loops that double time advancement and break audio sync.
+ */
 export function usePlayback() {
   const { playback, animationConfig, setPlayback } = useProjectStore()
   const rafRef = useRef<number | null>(null)
@@ -71,31 +118,9 @@ export function usePlayback() {
   }, [playback.isPlaying, animationConfig, tick])
 
   const seekTo = useCallback((time: number) => {
-    const config = useProjectStore.getState().animationConfig
-    if (!config) return
-
-    const clampedTime = Math.max(0, Math.min(time, config.totalDuration))
-
-    let elapsed = 0
-    let sceneIndex = 0
-    for (let i = 0; i < config.scenes.length; i++) {
-      const effectiveDuration = getEffectiveSceneDuration(config.scenes[i])
-      if (clampedTime < elapsed + effectiveDuration) {
-        sceneIndex = i
-        break
-      }
-      elapsed += effectiveDuration
-      if (i === config.scenes.length - 1) {
-        sceneIndex = i
-      }
-    }
-
-    setPlayback({
-      currentTime: clampedTime,
-      currentSceneIndex: sceneIndex,
-    })
+    seekToTime(time)
     lastTimeRef.current = 0
-  }, [setPlayback])
+  }, [])
 
   return { seekTo }
 }
