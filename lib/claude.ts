@@ -2,10 +2,18 @@ import AnthropicFoundry from '@anthropic-ai/foundry-sdk'
 import type Anthropic from '@anthropic-ai/sdk'
 import { loadSkills } from './skills'
 
-const anthropic = new AnthropicFoundry({
-  apiKey: process.env.ANTHROPIC_FOUNDRY_API_KEY || '',
-  baseURL: process.env.ANTHROPIC_FOUNDRY_BASE_URL || '',
-})
+// Lazy-init: avoid instantiating at module scope so the build doesn't
+// crash when ANTHROPIC_FOUNDRY_API_KEY is not set (CI / SWA deploy).
+let _anthropic: AnthropicFoundry | null = null
+function getClient(): AnthropicFoundry {
+  if (!_anthropic) {
+    _anthropic = new AnthropicFoundry({
+      apiKey: process.env.ANTHROPIC_FOUNDRY_API_KEY || '',
+      baseURL: process.env.ANTHROPIC_FOUNDRY_BASE_URL || '',
+    })
+  }
+  return _anthropic
+}
 
 const TEMPLATE_SCHEMAS = `
 ## Available Scene Templates
@@ -207,7 +215,7 @@ export async function* streamAnimation(
     { role: 'user', content: prompt },
   ]
 
-  const stream = anthropic.messages.stream({
+  const stream = getClient().messages.stream({
     model: process.env.ANTHROPIC_FOUNDRY_DEPLOYMENT || 'claude-sonnet-4-6',
     max_tokens: 32000,
     // thinking: {
@@ -243,4 +251,4 @@ export async function* streamAnimation(
   }
 }
 
-export { anthropic, buildSystemPrompt }
+export { getClient as anthropic, buildSystemPrompt }
