@@ -19,21 +19,22 @@ jobs:
         with:
           submodules: true
           lfs: false
-      - name: Install and prune heavy packages
+      - name: Build and prune heavy packages
         run: |
           npm ci
-          # Remove Remotion native binaries that bloat the deployment and
-          # cause the SWA warm-up health check to time out (~92 MB saved).
-          # The export API route handles their absence gracefully.
-          rm -rf node_modules/@remotion/compositor-linux-x64-gnu \
-                 node_modules/@remotion/compositor-linux-x64-musl \
-                 node_modules/@remotion/renderer \
-                 node_modules/@remotion/bundler \
-                 node_modules/@remotion/cli \
-                 node_modules/@remotion/studio \
-                 node_modules/@remotion/studio-server \
-                 node_modules/@remotion/web-renderer
           npx next build
+          # After the build, remove Remotion native binaries from the
+          # standalone output. They bloat the deployment (~92 MB) and cause
+          # the SWA warm-up health check to time out.
+          # The export API route handles their absence gracefully at runtime.
+          rm -rf .next/standalone/node_modules/@remotion/compositor-linux-x64-gnu \
+                 .next/standalone/node_modules/@remotion/compositor-linux-x64-musl \
+                 .next/standalone/node_modules/@remotion/renderer \
+                 .next/standalone/node_modules/@remotion/bundler \
+                 .next/standalone/node_modules/@remotion/cli \
+                 .next/standalone/node_modules/@remotion/studio \
+                 .next/standalone/node_modules/@remotion/studio-server \
+                 .next/standalone/node_modules/@remotion/web-renderer
       - name: Build And Deploy
         id: builddeploy
         timeout-minutes: 60
