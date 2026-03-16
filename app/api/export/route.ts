@@ -61,10 +61,24 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Dynamic imports — these are server-only modules
-    const { bundle } = await import('@remotion/bundler')
-    const { renderMedia, selectComposition } = await import('@remotion/renderer')
-    const { webpackOverride } = await import('@/lib/remotion/webpack-override')
+    // Dynamic imports — these are server-only modules.
+    // Remotion is pruned from the Azure SWA deployment to avoid warm-up
+    // timeouts, so we catch import failures and return a clear error.
+    let bundle: typeof import('@remotion/bundler')['bundle']
+    let renderMedia: typeof import('@remotion/renderer')['renderMedia']
+    let selectComposition: typeof import('@remotion/renderer')['selectComposition']
+    let webpackOverride: (typeof import('@/lib/remotion/webpack-override'))['webpackOverride']
+
+    try {
+      ;({ bundle } = await import('@remotion/bundler'))
+      ;({ renderMedia, selectComposition } = await import('@remotion/renderer'))
+      ;({ webpackOverride } = await import('@/lib/remotion/webpack-override'))
+    } catch {
+      return NextResponse.json(
+        { error: 'Video export is not available in this deployment. Remotion dependencies are not installed.' },
+        { status: 501 }
+      )
+    }
 
     // ── Step 1: Bundle (cached after first call) ──
     if (!cachedBundlePath || !fs.existsSync(cachedBundlePath)) {
